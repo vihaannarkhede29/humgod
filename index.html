@@ -28,6 +28,9 @@
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Tone.js for audio synthesis -->
+    <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -73,17 +76,93 @@
                 <span class="highlight">Real Music</span> Instantly
             </h1>
             <p class="hero-subtitle">
-                Hum. Hear. Build. Transform your melody into instruments with AI.
+                Record your hum or beatbox below and watch it transform into real instruments instantly!
             </p>
             <div class="hero-buttons">
-                <button class="btn btn-primary">
+                <button class="btn btn-primary" id="startCreatingBtn">
                     <i class="fas fa-play"></i>
                     Start Creating
                 </button>
-                <a href="waitlist.html" class="btn btn-secondary">
+                <button class="btn btn-secondary" onclick="window.location.href='waitlist.html'">
                     <i class="fas fa-crown"></i>
                     Join Waitlist
-                </a>
+                </button>
+            </div>
+            
+            <!-- Music Creation Interface -->
+            <div class="music-creation-interface" id="musicInterface">
+                <div class="recording-controls">
+                    <button class="btn btn-record" id="recordBtn">
+                        <i class="fas fa-microphone"></i>
+                        <span>Start Recording</span>
+                    </button>
+                    <button class="btn btn-stop" id="stopBtn" disabled>
+                        <i class="fas fa-stop"></i>
+                        <span>Stop Recording</span>
+                    </button>
+                    <button class="btn btn-play" id="playBtn" disabled>
+                        <i class="fas fa-play"></i>
+                        <span>Play Converted</span>
+                    </button>
+                    <button class="btn btn-secondary" id="demoBtn" onclick="showDemoMode()">
+                        <i class="fas fa-play-circle"></i>
+                        <span>Try Demo</span>
+                    </button>
+                </div>
+                
+                <div class="recording-status" id="recordingStatus">
+                    <div class="status-indicator">
+                        <div class="pulse-ring"></div>
+                        <i class="fas fa-microphone"></i>
+                    </div>
+                    <span>Ready to record your hum or beatbox</span>
+                </div>
+                
+                <div class="audio-visualizer" id="audioVisualizer">
+                    <canvas id="waveformCanvas" width="400" height="100"></canvas>
+                </div>
+                
+                <div class="detection-results" id="detectionResults" style="display: none;">
+                    <h3>Detected Elements</h3>
+                    <div class="results-grid">
+                        <div class="result-section">
+                            <h4><i class="fas fa-music"></i> Melody Notes</h4>
+                            <div class="notes-list" id="notesList"></div>
+                        </div>
+                        <div class="result-section">
+                            <h4><i class="fas fa-drum"></i> Percussion</h4>
+                            <div class="percussion-list" id="percussionList"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="instrument-controls" id="instrumentControls" style="display: none;">
+                    <h3>Instrument Settings</h3>
+                    <div class="controls-grid">
+                        <div class="control-group">
+                            <label>Melody Instrument:</label>
+                            <select id="melodyInstrument">
+                                <option value="piano">Piano</option>
+                                <option value="synth">Synthesizer</option>
+                                <option value="guitar">Guitar</option>
+                                <option value="violin">Violin</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Drum Kit:</label>
+                            <select id="drumKit">
+                                <option value="acoustic">Acoustic</option>
+                                <option value="electronic">Electronic</option>
+                                <option value="hip-hop">Hip-Hop</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Tempo:</label>
+                            <input type="range" id="tempoSlider" min="60" max="180" value="120">
+                            <span id="tempoValue">120 BPM</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="scroll-indicator">
@@ -210,7 +289,26 @@
             <p class="section-subtitle">Choose the plan that fits your creative needs</p>
             
             <div class="pricing-grid">
-                <div class="pricing-card special-lifetime">
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Free</h3>
+                        <div class="price">
+                            <span class="currency">$</span>
+                            <span class="amount">0</span>
+                            <span class="period">/month</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> 3 tracks per month</li>
+                        <li><i class="fas fa-check"></i> Basic instruments (piano, guitar)</li>
+                        <li><i class="fas fa-check"></i> 2 genre styles</li>
+                        <li><i class="fas fa-check"></i> MP3 download</li>
+                        <li><i class="fas fa-check"></i> Basic editing</li>
+                    </ul>
+                    <button class="btn btn-outline">Get Started</button>
+                </div>
+                
+                <div class="pricing-card special-lifetime featured">
                     <div class="lifetime-badge">
                         <i class="fas fa-crown"></i>
                         <span>Contest Winner</span>
@@ -238,46 +336,6 @@
                 
                 <div class="pricing-card">
                     <div class="pricing-header">
-                        <h3>Free</h3>
-                        <div class="price">
-                            <span class="currency">$</span>
-                            <span class="amount">0</span>
-                            <span class="period">/month</span>
-                        </div>
-                    </div>
-                    <ul class="pricing-features">
-                        <li><i class="fas fa-check"></i> 3 tracks per month</li>
-                        <li><i class="fas fa-check"></i> Basic instruments (piano, guitar)</li>
-                        <li><i class="fas fa-check"></i> 2 genre styles</li>
-                        <li><i class="fas fa-check"></i> MP3 download</li>
-                        <li><i class="fas fa-check"></i> Basic editing</li>
-                    </ul>
-                    <button class="btn btn-outline">Get Started</button>
-                </div>
-                
-                <div class="pricing-card featured">
-                    <div class="popular-badge">Most Popular</div>
-                    <div class="pricing-header">
-                        <h3>Pro</h3>
-                        <div class="price">
-                            <span class="currency">$</span>
-                            <span class="amount">19</span>
-                            <span class="period">/month</span>
-                        </div>
-                    </div>
-                    <ul class="pricing-features">
-                        <li><i class="fas fa-check"></i> Unlimited tracks</li>
-                        <li><i class="fas fa-check"></i> All instruments + synths</li>
-                        <li><i class="fas fa-check"></i> All genre styles</li>
-                        <li><i class="fas fa-check"></i> MIDI, WAV, MP3 download</li>
-                        <li><i class="fas fa-check"></i> Advanced editing</li>
-                        <li><i class="fas fa-check"></i> Priority processing</li>
-                    </ul>
-                    <button class="btn btn-primary">Get Started</button>
-                </div>
-                
-                <div class="pricing-card">
-                    <div class="pricing-header">
                         <h3>Premium</h3>
                         <div class="price">
                             <span class="currency">$</span>
@@ -286,7 +344,7 @@
                         </div>
                     </div>
                     <ul class="pricing-features">
-                        <li><i class="fas fa-check"></i> Everything in Pro</li>
+                        <li><i class="fas fa-check"></i> Everything in Lifetime Access</li>
                         <li><i class="fas fa-check"></i> Custom instrument packs</li>
                         <li><i class="fas fa-check"></i> Advanced AI features</li>
                         <li><i class="fas fa-check"></i> Collaboration tools</li>
@@ -502,7 +560,7 @@
             </div>
             
             <div class="footer-bottom">
-                <p>&copy; 2024 HumGod. All rights reserved.</p>
+                <p>&copy; 2025 HumGod. All rights reserved.</p>
             </div>
         </div>
     </footer>

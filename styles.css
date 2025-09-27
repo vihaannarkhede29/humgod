@@ -613,19 +613,13 @@ h1, h2, h3, h4, h5, h6 {
 
 .pricing-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 2rem;
     margin-top: 3rem;
     max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
     justify-items: center;
-}
-
-.pricing-grid .pricing-card:nth-child(3) {
-    grid-column: 1 / -1;
-    max-width: 400px;
-    margin: 0 auto;
 }
 
 .pricing-card {
@@ -636,6 +630,9 @@ h1, h2, h3, h4, h5, h6 {
     transition: var(--transition);
     position: relative;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .pricing-card:hover {
@@ -699,6 +696,13 @@ h1, h2, h3, h4, h5, h6 {
 .pricing-features {
     list-style: none;
     margin-bottom: 2rem;
+    flex-grow: 1;
+}
+
+.pricing-card .btn {
+    margin-top: auto;
+    text-align: center;
+    justify-content: center;
 }
 
 .pricing-features li {
@@ -1119,13 +1123,8 @@ h1, h2, h3, h4, h5, h6 {
     }
 
     .pricing-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
         gap: 1.5rem;
-    }
-    
-    .pricing-grid .pricing-card:nth-child(3) {
-        grid-column: 1;
-        max-width: none;
     }
 
     .pricing-card.featured {
@@ -1159,6 +1158,20 @@ h1, h2, h3, h4, h5, h6 {
     }
 }
 
+@media (max-width: 1024px) {
+    .pricing-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .pricing-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+}
+
 @media (max-width: 480px) {
     .container {
         padding: 0 15px;
@@ -1189,6 +1202,11 @@ h1, h2, h3, h4, h5, h6 {
 
     .step {
         padding: 1.5rem;
+    }
+
+    .pricing-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
     }
 }
 
@@ -1251,6 +1269,324 @@ a:focus {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+    }
+}
+
+/* ========================================
+   MUSIC CREATION INTERFACE STYLES
+   ======================================== */
+
+.music-creation-interface {
+    background: rgba(26, 26, 26, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 2rem;
+    margin-top: 2rem;
+    border: 1px solid var(--primary-color);
+    box-shadow: var(--shadow-primary);
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.recording-controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.btn-record {
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+    color: white;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-record:hover {
+    background: linear-gradient(135deg, #ff6666, #ff0000);
+    transform: translateY(-2px);
+}
+
+.btn-record.recording {
+    background: linear-gradient(135deg, #ff0000, #cc0000);
+    animation: pulse-red 1s infinite;
+}
+
+.btn-stop {
+    background: linear-gradient(135deg, #666666, #444444);
+    color: white;
+    border: none;
+}
+
+.btn-stop:hover:not(:disabled) {
+    background: linear-gradient(135deg, #888888, #666666);
+    transform: translateY(-2px);
+}
+
+.btn-play {
+    background: linear-gradient(135deg, #4CAF50, #2E7D32);
+    color: white;
+    border: none;
+}
+
+.btn-play:hover:not(:disabled) {
+    background: linear-gradient(135deg, #66BB6A, #4CAF50);
+    transform: translateY(-2px);
+}
+
+@keyframes pulse-red {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
+    50% { box-shadow: 0 0 0 20px rgba(255, 0, 0, 0); }
+}
+
+.recording-status {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 107, 53, 0.3);
+}
+
+.status-indicator {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 1rem;
+}
+
+.status-indicator i {
+    font-size: 2rem;
+    color: var(--primary-color);
+    position: relative;
+    z-index: 2;
+}
+
+.status-indicator.demo {
+    color: #ff9800;
+}
+
+.status-indicator.processing {
+    color: #2196f3;
+}
+
+.status-indicator.success {
+    color: #4caf50;
+}
+
+.pulse-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+    animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse-ring {
+    0% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.4);
+        opacity: 0;
+    }
+}
+
+.recording-status span {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+.audio-visualizer {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+#waveformCanvas {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.detection-results {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 107, 53, 0.3);
+}
+
+.detection-results h3 {
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-size: 1.5rem;
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.result-section h4 {
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.result-section h4 i {
+    color: var(--primary-color);
+}
+
+.notes-list, .percussion-list {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.note-item, .percussion-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background: rgba(255, 107, 53, 0.1);
+    border-radius: 8px;
+    border-left: 3px solid var(--primary-color);
+    font-size: 0.9rem;
+}
+
+.note-item .note-info, .percussion-item .percussion-info {
+    color: var(--text-primary);
+}
+
+.note-item .note-timing, .percussion-item .percussion-timing {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.instrument-controls {
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 107, 53, 0.3);
+}
+
+.instrument-controls h3 {
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-size: 1.5rem;
+}
+
+.controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.control-group label {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.control-group select, .control-group input[type="range"] {
+    padding: 0.8rem;
+    background: var(--background-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.control-group select:focus, .control-group input[type="range"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.control-group input[type="range"] {
+    padding: 0;
+    height: 6px;
+    background: var(--border-color);
+    border: none;
+    border-radius: 3px;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.control-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.control-group input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+#tempoValue {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+/* Responsive Design for Music Interface */
+@media (max-width: 768px) {
+    .music-creation-interface {
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+    
+    .recording-controls {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .results-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .controls-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    #waveformCanvas {
+        width: 100%;
+        max-width: 350px;
     }
 }
 
@@ -1644,8 +1980,11 @@ a:focus {
     background: linear-gradient(135deg, #fff5f0, #ffe8d6);
     border: 3px solid #ff6b35;
     position: relative;
-    transform: scale(1.05);
     box-shadow: 0 20px 60px rgba(255, 107, 53, 0.3);
+}
+
+.pricing-card.featured {
+    transform: scale(1.05);
 }
 
 .pricing-card.special-lifetime::before {
