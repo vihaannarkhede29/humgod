@@ -464,14 +464,16 @@ class HumGodAudioProcessor {
         this.playbackEngine = null;
         this.visualizer = null;
         
-        // Initialize Tone.js
-        this.initializeTone();
+        // Tone.js will be initialized when needed
+        this.toneInitialized = false;
     }
 
     async initializeTone() {
         try {
-            // Start Tone.js context
-            await Tone.start();
+            // Start Tone.js context only when needed
+            if (Tone.context.state === 'suspended') {
+                await Tone.start();
+            }
             console.log('Tone.js initialized successfully');
             
             // Initialize playback engine
@@ -493,6 +495,12 @@ class HumGodAudioProcessor {
 
     async startRecording() {
         try {
+            // Initialize Tone.js if not already done
+            if (!this.toneInitialized) {
+                await this.initializeTone();
+                this.toneInitialized = true;
+            }
+            
             // Request microphone access
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: {
@@ -549,8 +557,10 @@ class HumGodAudioProcessor {
             this.mediaRecorder.stop();
             this.isRecording = false;
             
-            // Stop visualizer
+        // Stop visualizer
+        if (this.visualizer) {
             this.visualizer.stopVisualization();
+        }
             
             this.updateUI('processing');
         }
