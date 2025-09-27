@@ -466,6 +466,12 @@ class HumGodAudioProcessor {
         
         // Tone.js will be initialized when needed
         this.toneInitialized = false;
+        this.selectedInstrument = 'piano'; // Default instrument
+    }
+    
+    setSelectedInstrument(instrument) {
+        this.selectedInstrument = instrument;
+        console.log('Audio processor instrument set to:', instrument);
     }
 
     async initializeTone() {
@@ -930,8 +936,9 @@ class HumGodAudioProcessor {
                 return;
             }
             
-            const melodyInstrument = document.getElementById('melodyInstrument').value;
-            const drumKit = document.getElementById('drumKit').value;
+            // Use selected instrument from the new interface
+            const melodyInstrument = this.selectedInstrument || 'piano';
+            const drumKit = 'acoustic';
             const tempo = parseInt(document.getElementById('tempoSlider').value);
             
             await this.playbackEngine.play({
@@ -1464,6 +1471,9 @@ function initMusicCreation() {
         });
     });
     
+    // Initialize instrument selection
+    initInstrumentSelection();
+    
     // Check if we're on localhost and automatically show demo mode
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         // Small delay to ensure UI is ready
@@ -1540,6 +1550,37 @@ function initMusicCreation() {
     });
 }
 
+// Initialize instrument selection
+function initInstrumentSelection() {
+    const instrumentBtns = document.querySelectorAll('.instrument-btn');
+    let selectedInstrument = 'piano'; // Default
+    
+    instrumentBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active class from all buttons
+            instrumentBtns.forEach(b => b.classList.remove('active'));
+            
+            // Add active class to clicked button
+            btn.classList.add('active');
+            
+            // Update selected instrument
+            selectedInstrument = btn.dataset.instrument;
+            
+            // Update the audio processor with selected instrument
+            if (window.audioProcessor) {
+                window.audioProcessor.setSelectedInstrument(selectedInstrument);
+            }
+            
+            console.log('Selected instrument:', selectedInstrument);
+        });
+    });
+    
+    // Set initial instrument
+    if (window.audioProcessor) {
+        window.audioProcessor.setSelectedInstrument(selectedInstrument);
+    }
+}
+
 // Demo mode function for when microphone access fails
 function showDemoMode() {
     const recordBtn = document.getElementById('recordBtn');
@@ -1567,6 +1608,9 @@ function showDemoMode() {
     newRecordBtn.innerHTML = '<i class="fas fa-play"></i><span>Try Demo</span>';
     newRecordBtn.style.backgroundColor = '#4CAF50';
     newRecordBtn.disabled = false;
+    
+    // Get selected instrument
+    const selectedInstrument = document.querySelector('.instrument-btn.active')?.dataset.instrument || 'piano';
     
     // Add demo data
     const demoNotes = [
@@ -1661,17 +1705,20 @@ function showDemoMode() {
                 </div>
             `;
             
-            // Simulate playing demo audio with visual feedback
-            let timeElapsed = 0;
-            const canvas = document.getElementById('waveformCanvas');
-            const ctx = canvas.getContext('2d');
+        // Simulate playing demo audio with visual feedback
+        let timeElapsed = 0;
+        const canvas = document.getElementById('waveformCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Show which instrument is being used
+        const instrumentName = selectedInstrument.charAt(0).toUpperCase() + selectedInstrument.slice(1);
             
             const playInterval = setInterval(() => {
                 timeElapsed += 0.5;
                 statusElement.innerHTML = `
                     <div class="status-indicator processing">
                         <i class="fas fa-volume-up"></i>
-                        <span>Playing converted audio... (${timeElapsed.toFixed(1)}s)</span>
+                        <span>Playing ${instrumentName}... (${timeElapsed.toFixed(1)}s)</span>
                     </div>
                 `;
                 

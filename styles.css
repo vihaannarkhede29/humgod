@@ -1276,6 +1276,67 @@ a:focus {
    MUSIC CREATION INTERFACE STYLES
    ======================================== */
 
+/* Instrument Selection */
+.instrument-selection {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.instrument-selection h3 {
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.instrument-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.instrument-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 107, 53, 0.3);
+    border-radius: 15px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.instrument-btn:hover {
+    background: rgba(255, 107, 53, 0.1);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.instrument-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+}
+
+.instrument-btn i {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.instrument-btn span {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
 .music-creation-interface {
     background: rgba(26, 26, 26, 0.95);
     backdrop-filter: blur(20px);
