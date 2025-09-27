@@ -1626,6 +1626,76 @@ a:focus {
     color: #cccccc;
 }
 
+/* Lifetime Access Pricing Card */
+.pricing-card.special-lifetime {
+    background: linear-gradient(135deg, #fff5f0, #ffe8d6);
+    border: 3px solid #ff6b35;
+    position: relative;
+    transform: scale(1.05);
+    box-shadow: 0 20px 60px rgba(255, 107, 53, 0.3);
+}
+
+.pricing-card.special-lifetime::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    border-radius: 10px 10px 0 0;
+}
+
+.lifetime-badge {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: white;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
+    z-index: 10;
+}
+
+.lifetime-badge i {
+    font-size: 14px;
+}
+
+.pricing-card.special-lifetime .pricing-header h3 {
+    color: #ff6b35;
+    font-weight: 700;
+}
+
+.pricing-card.special-lifetime .price .amount {
+    color: #ff6b35;
+    font-size: 3rem;
+}
+
+.pricing-card.special-lifetime .price .period {
+    color: #f7931e;
+    font-weight: 600;
+}
+
+.pricing-card.special-lifetime .btn {
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    border: none;
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+}
+
+.pricing-card.special-lifetime .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(255, 107, 53, 0.4);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .waitlist-title {
@@ -1658,5 +1728,10 @@ a:focus {
     .cta-stats {
         flex-direction: column;
         gap: 30px;
+    }
+    
+    .pricing-card.special-lifetime {
+        transform: none;
+        margin-bottom: 20px;
     }
 }
