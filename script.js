@@ -478,7 +478,12 @@ class HumGodAudioProcessor {
             this.playbackEngine = new PlaybackEngine();
             
             // Initialize visualizer
-            this.visualizer = new AudioVisualizer('waveformCanvas');
+            try {
+                this.visualizer = new AudioVisualizer('waveformCanvas');
+            } catch (error) {
+                console.warn('Visualizer initialization failed:', error);
+                this.visualizer = null;
+            }
             
         } catch (error) {
             console.error('Failed to initialize Tone.js:', error);
@@ -497,8 +502,13 @@ class HumGodAudioProcessor {
                 } 
             });
 
-            // Create audio context
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        // Create audio context (will be resumed after user gesture)
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Resume audio context after user gesture
+        if (this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
+        }
             
             // Create media recorder
             this.mediaRecorder = new MediaRecorder(stream, {
@@ -522,7 +532,9 @@ class HumGodAudioProcessor {
             this.isRecording = true;
             
             // Start visualizer
-            this.visualizer.startVisualization(stream);
+            if (this.visualizer) {
+                this.visualizer.startVisualization(stream);
+            }
             
             this.updateUI('recording');
             
