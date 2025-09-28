@@ -244,8 +244,7 @@ class MusicGenIntegration {
     async generateMusicWithMusicGen(audioBlob) {
         try {
             // Show progress
-            this.showProgress(0);
-            this.updateProgress(10, 'Converting audio format...');
+            this.updateProgress(0, 'Starting...');
 
             // Convert audio to base64 for server transmission
             const base64Audio = await this.audioBlobToBase64(audioBlob);
@@ -291,12 +290,11 @@ class MusicGenIntegration {
 
             this.updateProgress(100, 'Complete!');
             
-            // Update UI
+            // Update UI - give user time to see 100% completion
             setTimeout(() => {
                 this.updateProcessingUI(false);
                 this.showRecordingStatus('Music generated successfully!', 'success');
                 this.updatePlayButton(true);
-                this.hideProgress();
                 
                 // Auto-play the generated audio
                 console.log('🎵 Auto-playing generated audio...');
@@ -306,7 +304,12 @@ class MusicGenIntegration {
                     console.warn('Auto-play failed, user can click play button:', error);
                     this.showMessage('Audio ready! Click the play button to listen.', 'info');
                 }
-            }, 500);
+                
+                // Hide progress bar after a delay so user can see completion
+                setTimeout(() => {
+                    this.hideProgress();
+                }, 2000);
+            }, 1000);
 
             console.log('Music generated successfully');
 
