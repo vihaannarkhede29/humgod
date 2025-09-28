@@ -67,12 +67,7 @@ class MusicGenIntegration {
         }
 
         // Instrument selection
-        const instrumentBtns = document.querySelectorAll('.instrument-btn');
-        instrumentBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.selectInstrument(e.target.closest('.instrument-btn').dataset.instrument);
-            });
-        });
+        this.bindInstrumentButtons();
 
         // Tempo control
         const tempoSlider = document.getElementById('tempoSlider');
@@ -82,6 +77,36 @@ class MusicGenIntegration {
                 tempoValue.textContent = `${e.target.value} BPM`;
             });
         }
+    }
+
+    bindInstrumentButtons() {
+        // Try to bind immediately
+        this.attachInstrumentListeners();
+        
+        // Also try after a delay in case DOM isn't ready
+        setTimeout(() => {
+            this.attachInstrumentListeners();
+        }, 100);
+    }
+
+    attachInstrumentListeners() {
+        const instrumentBtns = document.querySelectorAll('.instrument-btn');
+        console.log(`Found ${instrumentBtns.length} instrument buttons`);
+        
+        instrumentBtns.forEach((btn, index) => {
+            // Remove existing listeners to avoid duplicates
+            btn.removeEventListener('click', this.handleInstrumentClick);
+            
+            console.log(`Button ${index}:`, btn.dataset.instrument, btn);
+            btn.addEventListener('click', this.handleInstrumentClick.bind(this));
+        });
+    }
+
+    handleInstrumentClick(e) {
+        e.preventDefault();
+        const instrument = e.target.closest('.instrument-btn').dataset.instrument;
+        console.log(`Clicked instrument: ${instrument}`);
+        this.selectInstrument(instrument);
     }
 
     addUserInteractionHandler() {
