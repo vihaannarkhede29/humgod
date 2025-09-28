@@ -384,11 +384,18 @@ class MusicGenIntegration {
             };
 
             // Play the audio
+            console.log('Attempting to play audio...', audio);
+            
+            // Ensure audio context is resumed for user interaction
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+            
             await audio.play();
             this.isPlaying = true;
             this.updatePlayButton(true);
 
-            console.log('Playing generated audio');
+            console.log('Playing generated audio successfully');
 
         } catch (error) {
             console.error('Failed to play audio:', error);
@@ -409,6 +416,7 @@ class MusicGenIntegration {
     }
 
     selectInstrument(instrument) {
+        console.log(`🎵 Selecting instrument: ${instrument} (was: ${this.currentInstrument})`);
         this.currentInstrument = instrument;
         
         // Update UI

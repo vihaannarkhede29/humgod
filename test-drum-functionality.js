@@ -144,13 +144,13 @@ class DrumTest {
     }
 }
 
-// Auto-run tests when script loads
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        const drumTest = new DrumTest();
-        drumTest.runTests();
-    }, 2000); // Wait 2 seconds for everything to load
-});
+// Auto-run tests when script loads - DISABLED
+// document.addEventListener('DOMContentLoaded', () => {
+//     setTimeout(() => {
+//         const drumTest = new DrumTest();
+//         drumTest.runTests();
+//     }, 2000); // Wait 2 seconds for everything to load
+// });
 
 // Manual test runner
 window.runDrumTests = () => {
