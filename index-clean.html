@@ -512,41 +512,12 @@
             window.location.href = window.location.href + (window.location.search ? '&' : '?') + 'nocache=' + Date.now();
         }
         
-        // Debug: Check if music interface elements exist and force hide them
+        // Debug: Check if music interface elements exist
         document.addEventListener('DOMContentLoaded', function() {
-            // Force hide any music interface elements
             const musicInterface = document.getElementById('musicInterface');
-            const instrumentSelection = document.querySelector('.instrument-selection');
-            const recordingControls = document.querySelector('.recording-controls');
-            const audioVisualizer = document.querySelector('.audio-visualizer');
-            
             if (musicInterface) {
-                console.warn('Music interface found on landing page - hiding it!');
+                console.warn('Music interface found on landing page - this should not happen!');
                 musicInterface.style.display = 'none';
-            }
-            
-            if (instrumentSelection) {
-                console.warn('Instrument selection found on landing page - hiding it!');
-                instrumentSelection.style.display = 'none';
-            }
-            
-            if (recordingControls) {
-                console.warn('Recording controls found on landing page - hiding it!');
-                recordingControls.style.display = 'none';
-            }
-            
-            if (audioVisualizer) {
-                console.warn('Audio visualizer found on landing page - hiding it!');
-                audioVisualizer.style.display = 'none';
-            }
-            
-            // Ensure try-it-now section is visible
-            const tryItNowSection = document.querySelector('.try-it-now-section');
-            if (tryItNowSection) {
-                tryItNowSection.style.display = 'block';
-                console.log('✅ Try It Now section is visible');
-            } else {
-                console.error('❌ Try It Now section not found!');
             }
         });
     </script>

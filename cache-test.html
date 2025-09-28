@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cache Test - HumGod</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #1a1a1a; 
+            color: white; 
+        }
+        .test-result { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+        }
+        .success { background: #4CAF50; }
+        .error { background: #f44336; }
+        .warning { background: #ff9800; }
+    </style>
+</head>
+<body>
+    <h1>Cache Test - HumGod</h1>
+    <p>This page tests if the music interface is present on the landing page.</p>
+    
+    <div id="test-results"></div>
+    
+    <script>
+        function addTestResult(message, type) {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            document.getElementById('test-results').appendChild(div);
+        }
+        
+        // Test 1: Check if music interface exists
+        const musicInterface = document.getElementById('musicInterface');
+        if (musicInterface) {
+            addTestResult('❌ Music interface found on landing page!', 'error');
+        } else {
+            addTestResult('✅ No music interface found on landing page', 'success');
+        }
+        
+        // Test 2: Check for instrument selection
+        const instrumentSelection = document.querySelector('.instrument-selection');
+        if (instrumentSelection) {
+            addTestResult('❌ Instrument selection found on landing page!', 'error');
+        } else {
+            addTestResult('✅ No instrument selection found on landing page', 'success');
+        }
+        
+        // Test 3: Check for recording controls
+        const recordingControls = document.querySelector('.recording-controls');
+        if (recordingControls) {
+            addTestResult('❌ Recording controls found on landing page!', 'error');
+        } else {
+            addTestResult('✅ No recording controls found on landing page', 'success');
+        }
+        
+        // Test 4: Check for try-it-now button
+        const tryItNowButton = document.querySelector('.try-it-now-section');
+        if (tryItNowButton) {
+            addTestResult('✅ Try It Now button found on landing page', 'success');
+        } else {
+            addTestResult('❌ Try It Now button not found on landing page!', 'error');
+        }
+        
+        // Test 5: Check script version
+        const scripts = document.querySelectorAll('script[src*="script.js"]');
+        if (scripts.length > 0) {
+            const scriptSrc = scripts[0].src;
+            if (scriptSrc.includes('v=4.0-20250101')) {
+                addTestResult('✅ Latest script version loaded', 'success');
+            } else {
+                addTestResult('⚠️ Old script version detected: ' + scriptSrc, 'warning');
+            }
+        } else {
+            addTestResult('❌ No script.js found!', 'error');
+        }
+        
+        // Test 6: Check for Tone.js
+        if (typeof Tone !== 'undefined') {
+            addTestResult('❌ Tone.js is still loaded!', 'error');
+        } else {
+            addTestResult('✅ Tone.js not loaded', 'success');
+        }
+        
+        addTestResult('Test completed at: ' + new Date().toLocaleString(), 'warning');
+    </script>
+</body>
+</html>
