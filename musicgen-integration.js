@@ -160,6 +160,7 @@ class MusicGenIntegration {
 
             // Update UI
             this.updateRecordingUI(true);
+            this.showRecordingStatus('Recording... Speak or hum into your microphone', 'recording');
             this.startAudioVisualization(stream);
 
             console.log('Recording started');
@@ -316,7 +317,7 @@ class MusicGenIntegration {
             this.updateProgress(100, 'Complete!');
             
             // Update UI - give user time to see 100% completion
-            setTimeout(() => {
+            setTimeout(async () => {
                 this.updateProcessingUI(false);
                 this.showRecordingStatus('Music generated successfully!', 'success');
                 this.updatePlayButton(true);
