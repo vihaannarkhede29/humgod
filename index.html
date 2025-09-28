@@ -35,7 +35,6 @@
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -81,26 +80,17 @@
                 <span class="highlight">Real Music</span> Instantly
             </h1>
             <p class="hero-subtitle">
-                Record your hum or beatbox below and watch it transform into real instruments instantly!
+                Transform your melodies, hums, and beats into full instrumental tracks instantly with AI!
             </p>
             <div class="hero-buttons">
-                <button class="btn btn-primary" id="startCreatingBtn">
+                <a href="try-it-now.html" class="btn btn-primary">
                     <i class="fas fa-play"></i>
-                    Start Creating
-                </button>
+                    Try It Now
+                </a>
                 <button class="btn btn-secondary" onclick="window.location.href='waitlist.html'">
                     <i class="fas fa-crown"></i>
                     Join Waitlist
                 </button>
-            </div>
-            
-            <!-- Try It Now Button -->
-            <div class="try-it-now-section">
-                <a href="try-it-now.html" class="btn btn-primary btn-large">
-                    <i class="fas fa-play"></i>
-                    Try It Now
-                </a>
-                <p class="try-subtitle">Experience AI music generation in action</p>
             </div>
         </div>
         <div class="scroll-indicator">
@@ -243,7 +233,7 @@
                         <li><i class="fas fa-check"></i> MP3 download</li>
                         <li><i class="fas fa-check"></i> Basic editing</li>
                     </ul>
-                    <button class="btn btn-outline">Get Started</button>
+                    <a href="try-it-now.html" class="btn btn-outline">Get Started</a>
                 </div>
                 
                 <div class="pricing-card special-lifetime featured">
@@ -289,7 +279,7 @@
                         <li><i class="fas fa-check"></i> Commercial license</li>
                         <li><i class="fas fa-check"></i> Priority support</li>
                     </ul>
-                    <button class="btn btn-outline">Get Started</button>
+                    <a href="try-it-now.html" class="btn btn-outline">Get Started</a>
                 </div>
             </div>
         </div>
@@ -506,52 +496,9 @@
     <!-- Vercel Analytics -->
     <script>
         window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-        
-        // Force cache refresh
-        if (window.location.search.indexOf('nocache') === -1) {
-            window.location.href = window.location.href + (window.location.search ? '&' : '?') + 'nocache=' + Date.now();
-        }
-        
-        // Debug: Check if music interface elements exist and force hide them
-        document.addEventListener('DOMContentLoaded', function() {
-            // Force hide any music interface elements
-            const musicInterface = document.getElementById('musicInterface');
-            const instrumentSelection = document.querySelector('.instrument-selection');
-            const recordingControls = document.querySelector('.recording-controls');
-            const audioVisualizer = document.querySelector('.audio-visualizer');
-            
-            if (musicInterface) {
-                console.warn('Music interface found on landing page - hiding it!');
-                musicInterface.style.display = 'none';
-            }
-            
-            if (instrumentSelection) {
-                console.warn('Instrument selection found on landing page - hiding it!');
-                instrumentSelection.style.display = 'none';
-            }
-            
-            if (recordingControls) {
-                console.warn('Recording controls found on landing page - hiding it!');
-                recordingControls.style.display = 'none';
-            }
-            
-            if (audioVisualizer) {
-                console.warn('Audio visualizer found on landing page - hiding it!');
-                audioVisualizer.style.display = 'none';
-            }
-            
-            // Ensure try-it-now section is visible
-            const tryItNowSection = document.querySelector('.try-it-now-section');
-            if (tryItNowSection) {
-                tryItNowSection.style.display = 'block';
-                console.log('✅ Try It Now section is visible');
-            } else {
-                console.error('❌ Try It Now section not found!');
-            }
-        });
     </script>
     <script defer src="/_vercel/insights/script.js"></script>
     
-    <script src="script.js?v=4.0-20250101"></script>
+    <script src="script.js?v=5.0-clean"></script>
 </body>
 </html>
