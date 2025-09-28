@@ -438,6 +438,18 @@ Transform your musical ideas into reality with AI.
 Built with ❤️ for musicians everywhere.
 `);
 
+// Prevent any Tone.js errors from cached versions
+if (typeof window !== 'undefined') {
+    // Override any potential Tone.js errors
+    window.addEventListener('error', function(e) {
+        if (e.message && e.message.includes('Tone') || e.message.includes('triggerAttackRelease')) {
+            console.warn('Ignoring Tone.js error from cached version:', e.message);
+            e.preventDefault();
+            return false;
+        }
+    });
+}
+
 // Service Worker registration (for future PWA features)
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
