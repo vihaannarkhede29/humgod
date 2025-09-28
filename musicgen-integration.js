@@ -297,6 +297,15 @@ class MusicGenIntegration {
                 this.showRecordingStatus('Music generated successfully!', 'success');
                 this.updatePlayButton(true);
                 this.hideProgress();
+                
+                // Auto-play the generated audio
+                console.log('🎵 Auto-playing generated audio...');
+                try {
+                    await this.playGeneratedAudio();
+                } catch (error) {
+                    console.warn('Auto-play failed, user can click play button:', error);
+                    this.showMessage('Audio ready! Click the play button to listen.', 'info');
+                }
             }, 500);
 
             console.log('Music generated successfully');
