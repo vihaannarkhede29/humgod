@@ -36,6 +36,9 @@ class MusicGenIntegration {
             // Bind event listeners
             this.bindEventListeners();
             
+            // Add user interaction handler to enable audio
+            this.addUserInteractionHandler();
+            
             console.log('MusicGen Integration initialized successfully');
         } catch (error) {
             console.error('Failed to initialize MusicGen Integration:', error);
@@ -79,6 +82,22 @@ class MusicGenIntegration {
                 tempoValue.textContent = `${e.target.value} BPM`;
             });
         }
+    }
+
+    addUserInteractionHandler() {
+        // Enable audio context on first user interaction
+        const enableAudio = async () => {
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                console.log('🎵 Enabling audio context on user interaction...');
+                await this.audioContext.resume();
+                console.log('✅ Audio context enabled');
+            }
+        };
+
+        // Add click listeners to enable audio
+        document.addEventListener('click', enableAudio, { once: true });
+        document.addEventListener('touchstart', enableAudio, { once: true });
+        document.addEventListener('keydown', enableAudio, { once: true });
     }
 
     async startRecording() {
@@ -366,11 +385,27 @@ class MusicGenIntegration {
                 return;
             }
 
+            console.log('🎵 Starting audio playback...');
+            console.log('Generated audio blob:', this.generatedAudio);
+            console.log('Audio blob size:', this.generatedAudio.size, 'bytes');
+            console.log('Audio blob type:', this.generatedAudio.type);
+
             // Create audio element for playback
             const audioUrl = URL.createObjectURL(this.generatedAudio);
             const audio = new Audio(audioUrl);
             
+            // Set audio properties
+            audio.volume = 0.8;
+            audio.preload = 'auto';
+            
+            // Add event listeners
+            audio.addEventListener('loadstart', () => console.log('Audio load started'));
+            audio.addEventListener('loadeddata', () => console.log('Audio data loaded'));
+            audio.addEventListener('canplay', () => console.log('Audio can play'));
+            audio.addEventListener('canplaythrough', () => console.log('Audio can play through'));
+            
             audio.onended = () => {
+                console.log('Audio playback ended');
                 this.isPlaying = false;
                 this.updatePlayButton(false);
                 URL.revokeObjectURL(audioUrl);
@@ -383,23 +418,40 @@ class MusicGenIntegration {
                 this.updatePlayButton(false);
             };
 
-            // Play the audio
-            console.log('Attempting to play audio...', audio);
-            
             // Ensure audio context is resumed for user interaction
             if (this.audioContext && this.audioContext.state === 'suspended') {
+                console.log('Resuming audio context...');
                 await this.audioContext.resume();
             }
             
-            await audio.play();
+            // Try to play the audio
+            console.log('Attempting to play audio...', audio);
+            console.log('Audio ready state:', audio.readyState);
+            console.log('Audio network state:', audio.networkState);
+            
+            // Wait for audio to be ready
+            if (audio.readyState < 2) {
+                console.log('Waiting for audio to load...');
+                await new Promise((resolve) => {
+                    audio.addEventListener('canplay', resolve, { once: true });
+                    audio.addEventListener('error', resolve, { once: true });
+                });
+            }
+            
+            const playPromise = audio.play();
+            
+            if (playPromise !== undefined) {
+                await playPromise;
+            }
+            
             this.isPlaying = true;
             this.updatePlayButton(true);
 
-            console.log('Playing generated audio successfully');
+            console.log('✅ Playing generated audio successfully');
 
         } catch (error) {
-            console.error('Failed to play audio:', error);
-            this.showError('Failed to play generated audio. Please try again.');
+            console.error('❌ Failed to play audio:', error);
+            this.showError(`Failed to play generated audio: ${error.message}`);
         }
     }
 
