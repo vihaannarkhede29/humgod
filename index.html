@@ -28,8 +28,6 @@
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- MusicGen Integration -->
-    <script src="musicgen-integration.js"></script>
     
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -89,118 +87,13 @@
                 </button>
             </div>
             
-            <!-- Music Creation Interface -->
-            <div class="music-creation-interface" id="musicInterface">
-                <!-- Instrument Selection -->
-                <div class="instrument-selection">
-                    <h3>Choose Your Instrument</h3>
-                    <div class="instrument-grid">
-                        <button class="instrument-btn active" data-instrument="piano">
-                            <i class="fas fa-music"></i>
-                            <span>Piano</span>
-                        </button>
-                        <button class="instrument-btn" data-instrument="guitar">
-                            <i class="fas fa-guitar"></i>
-                            <span>Guitar</span>
-                        </button>
-                        <button class="instrument-btn" data-instrument="violin">
-                            <i class="fas fa-violin"></i>
-                            <span>Violin</span>
-                        </button>
-                        <button class="instrument-btn" data-instrument="synth">
-                            <i class="fas fa-keyboard"></i>
-                            <span>Synth</span>
-                        </button>
-                        <button class="instrument-btn" data-instrument="drums">
-                            <i class="fas fa-drum"></i>
-                            <span>Drums</span>
-                        </button>
-                        <button class="instrument-btn" data-instrument="bass">
-                            <i class="fas fa-music"></i>
-                            <span>Bass</span>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="recording-controls">
-                    <button class="btn btn-record" id="recordBtn">
-                        <i class="fas fa-microphone"></i>
-                        <span>Start Recording</span>
-                    </button>
-                    <button class="btn btn-stop" id="stopBtn" disabled>
-                        <i class="fas fa-stop"></i>
-                        <span>Stop Recording</span>
-                    </button>
-                    <button class="btn btn-play" id="playBtn" disabled>
-                        <i class="fas fa-play"></i>
-                        <span>Play Generated</span>
-                    </button>
-                    <button class="btn btn-secondary" id="demoBtn">
-                        <i class="fas fa-play-circle"></i>
-                        <span>Try Demo</span>
-                    </button>
-                </div>
-                
-                <div class="recording-status" id="recordingStatus">
-                    <div class="status-indicator">
-                        <div class="pulse-ring"></div>
-                        <i class="fas fa-microphone"></i>
-                    </div>
-                    <span>Ready to record your hum or beatbox</span>
-                </div>
-                
-                <div class="progress-container" id="progressContainer" style="display: none;">
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill"></div>
-                    </div>
-                    <div class="progress-text" id="progressText">Processing...</div>
-                </div>
-                
-                <div class="audio-visualizer" id="audioVisualizer">
-                    <canvas id="waveformCanvas" width="400" height="100"></canvas>
-                </div>
-                
-                <div class="detection-results" id="detectionResults" style="display: none;">
-                    <h3>Detected Elements</h3>
-                    <div class="results-grid">
-                        <div class="result-section">
-                            <h4><i class="fas fa-music"></i> Melody Notes</h4>
-                            <div class="notes-list" id="notesList"></div>
-                        </div>
-                        <div class="result-section">
-                            <h4><i class="fas fa-drum"></i> Percussion</h4>
-                            <div class="percussion-list" id="percussionList"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="instrument-controls" id="instrumentControls" style="display: none;">
-                    <h3>Instrument Settings</h3>
-                    <div class="controls-grid">
-                        <div class="control-group">
-                            <label>Melody Instrument:</label>
-                            <select id="melodyInstrument">
-                                <option value="piano">Piano</option>
-                                <option value="synth">Synthesizer</option>
-                                <option value="guitar">Guitar</option>
-                                <option value="violin">Violin</option>
-                            </select>
-                        </div>
-                        <div class="control-group">
-                            <label>Drum Kit:</label>
-                            <select id="drumKit">
-                                <option value="acoustic">Acoustic</option>
-                                <option value="electronic">Electronic</option>
-                                <option value="hip-hop">Hip-Hop</option>
-                            </select>
-                        </div>
-                        <div class="control-group">
-                            <label>Tempo:</label>
-                            <input type="range" id="tempoSlider" min="60" max="180" value="120">
-                            <span id="tempoValue">120 BPM</span>
-                        </div>
-                    </div>
-                </div>
+            <!-- Try It Now Button -->
+            <div class="try-it-now-section">
+                <a href="try-it-now.html" class="btn btn-primary btn-large">
+                    <i class="fas fa-play"></i>
+                    Try It Now
+                </a>
+                <p class="try-subtitle">Experience AI music generation in action</p>
             </div>
         </div>
         <div class="scroll-indicator">
@@ -610,6 +503,5 @@
     <script defer src="/_vercel/insights/script.js"></script>
     
     <script src="script.js"></script>
-    <script src="test-drum-functionality.js"></script>
 </body>
 </html>

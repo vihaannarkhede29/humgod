@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Try HumGod - AI Music Generation</title>
+    <meta name="description" content="Try HumGod's AI music generation - Record your hum or beatbox and transform it into real instruments instantly.">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- MusicGen Integration -->
+    <script src="musicgen-integration.js"></script>
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-music"></i>
+                <span>HumGod</span>
+            </div>
+            <div class="nav-menu">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="waitlist.html" class="nav-link">Join Waitlist</a>
+            </div>
+            <div class="nav-toggle">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-background">
+            <div class="wave-animation">
+                <div class="wave wave1"></div>
+                <div class="wave wave2"></div>
+                <div class="wave wave3"></div>
+            </div>
+            <div class="floating-notes">
+                <div class="note note1">♪</div>
+                <div class="note note2">♫</div>
+                <div class="note note3">♪</div>
+                <div class="note note4">♫</div>
+            </div>
+        </div>
+        <div class="hero-content">
+            <h1 class="hero-title">
+                Try <span class="highlight">HumGod</span> Now
+            </h1>
+            <p class="hero-subtitle">
+                Record your hum or beatbox and watch it transform into real instruments instantly with AI!
+            </p>
+            
+            <!-- Music Creation Interface -->
+            <div class="music-creation-interface" id="musicInterface">
+                <!-- Instrument Selection -->
+                <div class="instrument-selection">
+                    <h3>Choose Your Instrument</h3>
+                    <div class="instrument-grid">
+                        <button class="instrument-btn active" data-instrument="piano">
+                            <i class="fas fa-music"></i>
+                            <span>Piano</span>
+                        </button>
+                        <button class="instrument-btn" data-instrument="guitar">
+                            <i class="fas fa-guitar"></i>
+                            <span>Guitar</span>
+                        </button>
+                        <button class="instrument-btn" data-instrument="violin">
+                            <i class="fas fa-violin"></i>
+                            <span>Violin</span>
+                        </button>
+                        <button class="instrument-btn" data-instrument="synth">
+                            <i class="fas fa-keyboard"></i>
+                            <span>Synth</span>
+                        </button>
+                        <button class="instrument-btn" data-instrument="drums">
+                            <i class="fas fa-drum"></i>
+                            <span>Drums</span>
+                        </button>
+                        <button class="instrument-btn" data-instrument="bass">
+                            <i class="fas fa-music"></i>
+                            <span>Bass</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="recording-controls">
+                    <button class="btn btn-record" id="recordBtn">
+                        <i class="fas fa-microphone"></i>
+                        <span>Start Recording</span>
+                    </button>
+                    <button class="btn btn-stop" id="stopBtn" disabled>
+                        <i class="fas fa-stop"></i>
+                        <span>Stop Recording</span>
+                    </button>
+                    <button class="btn btn-play" id="playBtn" disabled>
+                        <i class="fas fa-play"></i>
+                        <span>Play Generated</span>
+                    </button>
+                    <button class="btn btn-secondary" id="demoBtn">
+                        <i class="fas fa-play-circle"></i>
+                        <span>Try Demo</span>
+                    </button>
+                </div>
+                
+                <div class="recording-status" id="recordingStatus">
+                    <div class="status-indicator">
+                        <div class="pulse-ring"></div>
+                        <i class="fas fa-microphone"></i>
+                    </div>
+                    <span>Ready to record your hum or beatbox</span>
+                </div>
+                
+                <div class="progress-container" id="progressContainer" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Processing...</div>
+                </div>
+                
+                <div class="audio-visualizer" id="audioVisualizer">
+                    <canvas id="waveformCanvas" width="400" height="100"></canvas>
+                </div>
+                
+                <div class="detection-results" id="detectionResults" style="display: none;">
+                    <h3>Detected Elements</h3>
+                    <div class="results-grid">
+                        <div class="result-section">
+                            <h4><i class="fas fa-music"></i> Melody Notes</h4>
+                            <div class="notes-list" id="notesList"></div>
+                        </div>
+                        <div class="result-section">
+                            <h4><i class="fas fa-drum"></i> Percussion</h4>
+                            <div class="percussion-list" id="percussionList"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="instrument-controls" id="instrumentControls" style="display: none;">
+                    <h3>Instrument Settings</h3>
+                    <div class="controls-grid">
+                        <div class="control-group">
+                            <label>Melody Instrument:</label>
+                            <select id="melodyInstrument">
+                                <option value="piano">Piano</option>
+                                <option value="synth">Synthesizer</option>
+                                <option value="guitar">Guitar</option>
+                                <option value="violin">Violin</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Drum Kit:</label>
+                            <select id="drumKit">
+                                <option value="acoustic">Acoustic</option>
+                                <option value="electronic">Electronic</option>
+                                <option value="hip-hop">Hip-Hop</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Tempo:</label>
+                            <input type="range" id="tempoSlider" min="60" max="180" value="120">
+                            <span id="tempoValue">120 BPM</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="how-it-works">
+        <div class="container">
+            <h2 class="section-title">How It Works</h2>
+            <p class="section-subtitle">From hum to harmony in four simple steps</p>
+            
+            <div class="steps-container">
+                <div class="step">
+                    <div class="step-icon">
+                        <i class="fas fa-microphone"></i>
+                    </div>
+                    <h3>Record or Upload</h3>
+                    <p>Hum, sing, or beatbox your melody directly in the browser or upload an audio file</p>
+                </div>
+                
+                <div class="step-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                
+                <div class="step">
+                    <div class="step-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>AI Analysis</h3>
+                    <p>Our AI analyzes pitch, rhythm, and timing to understand your musical intention</p>
+                </div>
+                
+                <div class="step-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                
+                <div class="step">
+                    <div class="step-icon">
+                        <i class="fas fa-magic"></i>
+                    </div>
+                    <h3>Transform</h3>
+                    <p>Seamlessly convert your recording into full instrumental tracks with perfect timing</p>
+                </div>
+                
+                <div class="step-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                
+                <div class="step">
+                    <div class="step-icon">
+                        <i class="fas fa-download"></i>
+                    </div>
+                    <h3>Create & Share</h3>
+                    <p>Edit, layer, and download your track or share it with the world</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Powerful Features</h2>
+            <p class="section-subtitle">Everything you need to bring your musical ideas to life</p>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3>Real-Time Conversion</h3>
+                    <p>Transform your hums into professional instrument tracks instantly with perfect timing synchronization</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-guitar"></i>
+                    </div>
+                    <h3>Multi-Instrument Support</h3>
+                    <p>Piano, guitar, bass, drums, and synthesizers - create full arrangements from a single recording</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-palette"></i>
+                    </div>
+                    <h3>Genre Adaptation</h3>
+                    <p>Choose from pop, rock, EDM, jazz, lo-fi and more to match your musical style and vision</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-edit"></i>
+                    </div>
+                    <h3>Simple Editing</h3>
+                    <p>Mute, solo, swap instruments, adjust tempo, and add layers with intuitive controls</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-share-alt"></i>
+                    </div>
+                    <h3>Export & Share</h3>
+                    <p>Download as MIDI, WAV, or MP3. Share your creations with unique links or social media</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Accessible Anywhere</h3>
+                    <p>Web-based platform works on desktop, tablet, and mobile - no downloads required</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-logo">
+                        <i class="fas fa-music"></i>
+                        <span>HumGod</span>
+                    </div>
+                    <p>Transform your musical ideas into reality with the power of AI. From hum to harmony, instantly.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Product</h4>
+                    <ul>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="index.html#pricing">Pricing</a></li>
+                        <li><a href="#">API</a></li>
+                        <li><a href="#">Integrations</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="#">About</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="#">Help Center</a></li>
+                        <li><a href="#">Community</a></li>
+                        <li><a href="#">Tutorials</a></li>
+                        <li><a href="#">Status</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Cookie Policy</a></li>
+                        <li><a href="#">Licenses</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 HumGod. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Vercel Analytics -->
+    <script>
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+    
+    <script src="script.js"></script>
+    <script src="test-drum-functionality.js"></script>
+</body>
+</html>
