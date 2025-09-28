@@ -74,32 +74,32 @@ app.post('/generate-music', upload.single('audio'), async (req, res) => {
 
         console.log(`Generating ${instrument} music for ${req.file.originalname || 'audio'}`);
 
-        // Create form data for MusicGen API
-        const formData = new FormData();
-        formData.append('audio', req.file.buffer, {
-            filename: req.file.originalname || 'audio.wav',
-            contentType: 'audio/wav'
-        });
-        
         // Create enhanced prompt based on instrument and style
         const prompt = createEnhancedPrompt(instrument, style);
-        formData.append('prompt', prompt);
-        formData.append('duration', duration);
-        formData.append('continuation', 'true');
-        formData.append('output_format', 'wav');
-        formData.append('top_k', '250');
-        formData.append('top_p', '0.0');
-        formData.append('temperature', '1.0');
-        formData.append('cfg_coef', '3.5');
+        
+        // Convert audio buffer to base64 for JSON payload
+        const audioBase64 = req.file.buffer.toString('base64');
+        
+        // Create JSON payload for MusicGen API
+        const payload = {
+            inputs: prompt,
+            parameters: {
+                duration: parseFloat(duration) || 10,
+                top_k: 250,
+                top_p: 0.0,
+                temperature: 1.0,
+                cfg_coef: 3.5
+            }
+        };
 
         // Make request to MusicGen API
         const response = await fetch(MUSICGEN_CONFIG.apiUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${MUSICGEN_CONFIG.apiKey}`,
-                ...formData.getHeaders()
+                'Content-Type': 'application/json'
             },
-            body: formData,
+            body: JSON.stringify(payload),
             timeout: MUSICGEN_CONFIG.timeout
         });
 
@@ -154,32 +154,29 @@ app.post('/generate-music-base64', async (req, res) => {
         
         console.log(`Generating ${instrument} music from base64 audio data`);
 
-        // Create form data for MusicGen API
-        const formData = new FormData();
-        formData.append('audio', audioBuffer, {
-            filename: 'audio.wav',
-            contentType: 'audio/wav'
-        });
-        
         // Create enhanced prompt
         const prompt = createEnhancedPrompt(instrument, style);
-        formData.append('prompt', prompt);
-        formData.append('duration', duration);
-        formData.append('continuation', 'true');
-        formData.append('output_format', 'wav');
-        formData.append('top_k', '250');
-        formData.append('top_p', '0.0');
-        formData.append('temperature', '1.0');
-        formData.append('cfg_coef', '3.5');
+        
+        // Create JSON payload for MusicGen API
+        const payload = {
+            inputs: prompt,
+            parameters: {
+                duration: parseFloat(duration) || 10,
+                top_k: 250,
+                top_p: 0.0,
+                temperature: 1.0,
+                cfg_coef: 3.5
+            }
+        };
 
         // Make request to MusicGen API
         const response = await fetch(MUSICGEN_CONFIG.apiUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${MUSICGEN_CONFIG.apiKey}`,
-                ...formData.getHeaders()
+                'Content-Type': 'application/json'
             },
-            body: formData,
+            body: JSON.stringify(payload),
             timeout: MUSICGEN_CONFIG.timeout
         });
 
