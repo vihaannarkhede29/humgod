@@ -268,7 +268,7 @@ function createEnhancedPrompt(instrument, style) {
         digital: 'using digital synthesizer sounds',
         ambient: 'in an ambient, atmospheric style',
         electronic: 'with electronic, synthesized sounds',
-        hip-hop: 'in a hip-hop style with urban beats',
+        'hip-hop': 'in a hip-hop style with urban beats',
         funk: 'in a funk style with groovy bass lines'
     };
 
