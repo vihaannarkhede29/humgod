@@ -28,8 +28,8 @@
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Tone.js for audio synthesis -->
-    <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+    <!-- MusicGen Integration -->
+    <script src="musicgen-integration.js"></script>
     
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -133,9 +133,9 @@
                     </button>
                     <button class="btn btn-play" id="playBtn" disabled>
                         <i class="fas fa-play"></i>
-                        <span>Play Converted</span>
+                        <span>Play Generated</span>
                     </button>
-                    <button class="btn btn-secondary" id="demoBtn" onclick="showDemoMode()">
+                    <button class="btn btn-secondary" id="demoBtn">
                         <i class="fas fa-play-circle"></i>
                         <span>Try Demo</span>
                     </button>
@@ -147,6 +147,13 @@
                         <i class="fas fa-microphone"></i>
                     </div>
                     <span>Ready to record your hum or beatbox</span>
+                </div>
+                
+                <div class="progress-container" id="progressContainer" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Processing...</div>
                 </div>
                 
                 <div class="audio-visualizer" id="audioVisualizer">
@@ -603,5 +610,6 @@
     <script defer src="/_vercel/insights/script.js"></script>
     
     <script src="script.js"></script>
+    <script src="test-drum-functionality.js"></script>
 </body>
 </html>

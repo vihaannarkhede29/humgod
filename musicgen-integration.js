@@ -1,0 +1,665 @@
+// MusicGen Integration for HumGod
+// Complete audio recording, processing, and MusicGen generation system
+
+class MusicGenIntegration {
+    constructor() {
+        this.audioContext = null;
+        this.mediaRecorder = null;
+        this.audioChunks = [];
+        this.recordedAudio = null;
+        this.generatedAudio = null;
+        this.isRecording = false;
+        this.isPlaying = false;
+        this.currentInstrument = 'piano';
+        this.audioVisualizer = null;
+        this.animationId = null;
+        
+        // MusicGen API configuration
+        this.musicGenConfig = {
+            serverUrl: 'http://localhost:3001', // Local server for MusicGen API
+            apiUrl: 'https://api-inference.huggingface.co/models/facebook/musicgen-stereo-melody-large',
+            apiKey: 'YOUR_HUGGING_FACE_API_KEY', // Replace with your actual API key
+            model: 'facebook/musicgen-stereo-melody-large'
+        };
+        
+        this.init();
+    }
+
+    async init() {
+        try {
+            // Initialize Web Audio API
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Initialize audio visualizer
+            this.initAudioVisualizer();
+            
+            // Bind event listeners
+            this.bindEventListeners();
+            
+            console.log('MusicGen Integration initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize MusicGen Integration:', error);
+            this.showError('Failed to initialize audio system. Please refresh the page.');
+        }
+    }
+
+    bindEventListeners() {
+        // Recording controls
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const playBtn = document.getElementById('playBtn');
+        const demoBtn = document.getElementById('demoBtn');
+
+        if (recordBtn) {
+            recordBtn.addEventListener('click', () => this.startRecording());
+        }
+        if (stopBtn) {
+            stopBtn.addEventListener('click', () => this.stopRecording());
+        }
+        if (playBtn) {
+            playBtn.addEventListener('click', () => this.playGeneratedAudio());
+        }
+        if (demoBtn) {
+            demoBtn.addEventListener('click', () => this.showDemoMode());
+        }
+
+        // Instrument selection
+        const instrumentBtns = document.querySelectorAll('.instrument-btn');
+        instrumentBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.selectInstrument(e.target.closest('.instrument-btn').dataset.instrument);
+            });
+        });
+
+        // Tempo control
+        const tempoSlider = document.getElementById('tempoSlider');
+        const tempoValue = document.getElementById('tempoValue');
+        if (tempoSlider && tempoValue) {
+            tempoSlider.addEventListener('input', (e) => {
+                tempoValue.textContent = `${e.target.value} BPM`;
+            });
+        }
+    }
+
+    async startRecording() {
+        try {
+            // Request microphone access
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    sampleRate: 44100
+                } 
+            });
+
+            // Create MediaRecorder
+            this.mediaRecorder = new MediaRecorder(stream, {
+                mimeType: 'audio/webm;codecs=opus'
+            });
+
+            this.audioChunks = [];
+            this.isRecording = true;
+
+            // Set up recording event handlers
+            this.mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    this.audioChunks.push(event.data);
+                }
+            };
+
+            this.mediaRecorder.onstop = () => {
+                this.processRecordedAudio();
+            };
+
+            // Start recording
+            this.mediaRecorder.start(100); // Collect data every 100ms
+
+            // Update UI
+            this.updateRecordingUI(true);
+            this.startAudioVisualization(stream);
+
+            console.log('Recording started');
+        } catch (error) {
+            console.error('Failed to start recording:', error);
+            this.showError('Failed to access microphone. Please check permissions.');
+        }
+    }
+
+    stopRecording() {
+        if (this.mediaRecorder && this.isRecording) {
+            this.mediaRecorder.stop();
+            this.isRecording = false;
+            this.updateRecordingUI(false);
+            this.stopAudioVisualization();
+            
+            // Stop all tracks to release microphone
+            this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            
+            console.log('Recording stopped');
+        }
+    }
+
+    async processRecordedAudio() {
+        try {
+            // Create blob from recorded chunks
+            const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+            this.recordedAudio = audioBlob;
+
+            // Convert to WAV for better compatibility
+            const wavBlob = await this.convertToWav(audioBlob);
+            
+            // Update UI
+            this.updateProcessingUI(true);
+            this.showRecordingStatus('Processing your recording...', 'processing');
+
+            // Generate music with MusicGen
+            await this.generateMusicWithMusicGen(wavBlob);
+
+        } catch (error) {
+            console.error('Failed to process recorded audio:', error);
+            this.showError('Failed to process your recording. Please try again.');
+        }
+    }
+
+    async convertToWav(audioBlob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async () => {
+                try {
+                    const arrayBuffer = reader.result;
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                    
+                    // Convert to WAV format
+                    const wavBlob = this.audioBufferToWav(audioBuffer);
+                    resolve(wavBlob);
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            reader.readAsArrayBuffer(audioBlob);
+        });
+    }
+
+    audioBufferToWav(buffer) {
+        const length = buffer.length;
+        const sampleRate = buffer.sampleRate;
+        const numberOfChannels = buffer.numberOfChannels;
+        const arrayBuffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
+        const view = new DataView(arrayBuffer);
+
+        // WAV header
+        const writeString = (offset, string) => {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        };
+
+        writeString(0, 'RIFF');
+        view.setUint32(4, 36 + length * numberOfChannels * 2, true);
+        writeString(8, 'WAVE');
+        writeString(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, numberOfChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * numberOfChannels * 2, true);
+        view.setUint16(32, numberOfChannels * 2, true);
+        view.setUint16(34, 16, true);
+        writeString(36, 'data');
+        view.setUint32(40, length * numberOfChannels * 2, true);
+
+        // Convert audio data
+        let offset = 44;
+        for (let i = 0; i < length; i++) {
+            for (let channel = 0; channel < numberOfChannels; channel++) {
+                const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+                view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                offset += 2;
+            }
+        }
+
+        return new Blob([arrayBuffer], { type: 'audio/wav' });
+    }
+
+    async generateMusicWithMusicGen(audioBlob) {
+        try {
+            // Show progress
+            this.showProgress(0);
+            this.updateProgress(10, 'Converting audio format...');
+
+            // Convert audio to base64 for server transmission
+            const base64Audio = await this.audioBlobToBase64(audioBlob);
+            
+            this.updateProgress(30, 'Sending to MusicGen API...');
+
+            // Create request payload
+            const payload = {
+                audioData: base64Audio,
+                instrument: this.currentInstrument,
+                duration: '10',
+                style: 'classical'
+            };
+
+            // Make API request to our server
+            const response = await fetch(`${this.musicGenConfig.serverUrl}/generate-music-base64`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Server request failed: ${response.status}`);
+            }
+
+            this.updateProgress(70, 'Processing with MusicGen...');
+
+            // Get the response
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to generate music');
+            }
+
+            this.updateProgress(90, 'Converting audio...');
+
+            // Convert base64 back to blob
+            const generatedBlob = this.base64ToBlob(result.audioData, 'audio/wav');
+            this.generatedAudio = generatedBlob;
+
+            this.updateProgress(100, 'Complete!');
+            
+            // Update UI
+            setTimeout(() => {
+                this.updateProcessingUI(false);
+                this.showRecordingStatus('Music generated successfully!', 'success');
+                this.updatePlayButton(true);
+                this.hideProgress();
+            }, 500);
+
+            console.log('Music generated successfully');
+
+        } catch (error) {
+            console.error('Failed to generate music:', error);
+            this.showError(`Failed to generate music: ${error.message}`);
+            this.updateProcessingUI(false);
+            this.hideProgress();
+        }
+    }
+
+    // Helper function to convert audio blob to base64
+    async audioBlobToBase64(audioBlob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const base64 = reader.result.split(',')[1]; // Remove data:audio/wav;base64, prefix
+                resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(audioBlob);
+        });
+    }
+
+    // Helper function to convert base64 to blob
+    base64ToBlob(base64, mimeType) {
+        const byteCharacters = atob(base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        return new Blob([byteArray], { type: mimeType });
+    }
+
+    // Update progress bar
+    updateProgress(percentage, text) {
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const progressContainer = document.getElementById('progressContainer');
+
+        if (progressFill) {
+            progressFill.style.width = `${percentage}%`;
+        }
+        if (progressText) {
+            progressText.textContent = text;
+        }
+        if (progressContainer) {
+            progressContainer.style.display = 'block';
+        }
+    }
+
+    // Hide progress bar
+    hideProgress() {
+        const progressContainer = document.getElementById('progressContainer');
+        if (progressContainer) {
+            setTimeout(() => {
+                progressContainer.style.display = 'none';
+            }, 1000);
+        }
+    }
+
+    createMusicGenPrompt() {
+        const instrumentPrompts = {
+            'piano': 'Generate a beautiful piano melody based on the provided audio input. Focus on the melody and harmony.',
+            'guitar': 'Create an acoustic guitar arrangement that follows the melody and rhythm of the input audio.',
+            'violin': 'Generate a violin melody that captures the emotional essence of the input audio.',
+            'synth': 'Create a modern synthesizer track with electronic sounds based on the input audio.',
+            'drums': 'Generate ONLY a drum track with kick, snare, hi-hats, and cymbals based on the beatboxing rhythm. NO other instruments.',
+            'bass': 'Create a bass line that follows the rhythm and complements the melody of the input audio.'
+        };
+
+        return instrumentPrompts[this.currentInstrument] || instrumentPrompts['piano'];
+    }
+
+    async playGeneratedAudio() {
+        if (!this.generatedAudio) {
+            this.showError('No generated audio available. Please record and generate music first.');
+            return;
+        }
+
+        try {
+            if (this.isPlaying) {
+                this.stopAudio();
+                return;
+            }
+
+            // Create audio element for playback
+            const audioUrl = URL.createObjectURL(this.generatedAudio);
+            const audio = new Audio(audioUrl);
+            
+            audio.onended = () => {
+                this.isPlaying = false;
+                this.updatePlayButton(false);
+                URL.revokeObjectURL(audioUrl);
+            };
+
+            audio.onerror = (error) => {
+                console.error('Audio playback error:', error);
+                this.showError('Failed to play generated audio.');
+                this.isPlaying = false;
+                this.updatePlayButton(false);
+            };
+
+            // Play the audio
+            await audio.play();
+            this.isPlaying = true;
+            this.updatePlayButton(true);
+
+            console.log('Playing generated audio');
+
+        } catch (error) {
+            console.error('Failed to play audio:', error);
+            this.showError('Failed to play generated audio. Please try again.');
+        }
+    }
+
+    stopAudio() {
+        // Stop any currently playing audio
+        const audioElements = document.querySelectorAll('audio');
+        audioElements.forEach(audio => {
+            audio.pause();
+            audio.currentTime = 0;
+        });
+        
+        this.isPlaying = false;
+        this.updatePlayButton(false);
+    }
+
+    selectInstrument(instrument) {
+        this.currentInstrument = instrument;
+        
+        // Update UI
+        document.querySelectorAll('.instrument-btn').forEach(btn => {
+            btn.classList.remove('active', 'drum-only');
+        });
+        
+        const selectedBtn = document.querySelector(`[data-instrument="${instrument}"]`);
+        selectedBtn.classList.add('active');
+        
+        // Add special styling for drums to emphasize drums-only output
+        if (instrument === 'drums') {
+            selectedBtn.classList.add('drum-only');
+        }
+        
+        console.log(`Selected instrument: ${instrument}`);
+        
+        // Show special message for drums
+        if (instrument === 'drums') {
+            this.showMessage('Drum mode selected - Only percussion instruments will be generated!', 'info');
+        }
+    }
+
+    initAudioVisualizer() {
+        const canvas = document.getElementById('waveformCanvas');
+        if (!canvas) return;
+
+        this.audioVisualizer = {
+            canvas: canvas,
+            ctx: canvas.getContext('2d'),
+            width: canvas.width,
+            height: canvas.height
+        };
+    }
+
+    startAudioVisualization(stream) {
+        if (!this.audioVisualizer) return;
+
+        const analyser = this.audioContext.createAnalyser();
+        const source = this.audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+
+        analyser.fftSize = 256;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        const draw = () => {
+            if (!this.isRecording) return;
+
+            this.animationId = requestAnimationFrame(draw);
+            analyser.getByteFrequencyData(dataArray);
+
+            const ctx = this.audioVisualizer.ctx;
+            const width = this.audioVisualizer.width;
+            const height = this.audioVisualizer.height;
+
+            // Clear canvas
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw waveform
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#ff6b35';
+            ctx.beginPath();
+
+            const sliceWidth = width / bufferLength;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 255.0;
+                const y = (v * height) / 2;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+
+                x += sliceWidth;
+            }
+
+            ctx.lineTo(width, height / 2);
+            ctx.stroke();
+        };
+
+        draw();
+    }
+
+    stopAudioVisualization() {
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+
+        // Clear canvas
+        if (this.audioVisualizer) {
+            const ctx = this.audioVisualizer.ctx;
+            const width = this.audioVisualizer.width;
+            const height = this.audioVisualizer.height;
+            
+            ctx.clearRect(0, 0, width, height);
+        }
+    }
+
+    updateRecordingUI(isRecording) {
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const playBtn = document.getElementById('playBtn');
+
+        if (recordBtn) {
+            recordBtn.disabled = isRecording;
+            recordBtn.classList.toggle('recording', isRecording);
+        }
+        if (stopBtn) {
+            stopBtn.disabled = !isRecording;
+        }
+        if (playBtn) {
+            playBtn.disabled = true;
+        }
+    }
+
+    updateProcessingUI(isProcessing) {
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const playBtn = document.getElementById('playBtn');
+
+        if (recordBtn) {
+            recordBtn.disabled = isProcessing;
+        }
+        if (stopBtn) {
+            stopBtn.disabled = isProcessing;
+        }
+        if (playBtn) {
+            playBtn.disabled = isProcessing;
+        }
+    }
+
+    updatePlayButton(isPlaying) {
+        const playBtn = document.getElementById('playBtn');
+        if (!playBtn) return;
+
+        const icon = playBtn.querySelector('i');
+        const text = playBtn.querySelector('span');
+
+        if (isPlaying) {
+            icon.className = 'fas fa-stop';
+            text.textContent = 'Stop Playing';
+        } else {
+            icon.className = 'fas fa-play';
+            text.textContent = 'Play Converted';
+        }
+    }
+
+    showRecordingStatus(message, type = 'default') {
+        const statusElement = document.getElementById('recordingStatus');
+        if (!statusElement) return;
+
+        const statusText = statusElement.querySelector('span');
+        const statusIndicator = statusElement.querySelector('.status-indicator');
+
+        if (statusText) {
+            statusText.textContent = message;
+        }
+
+        if (statusIndicator) {
+            statusIndicator.className = `status-indicator ${type}`;
+        }
+    }
+
+    showProgress(percentage) {
+        // Create or update progress bar
+        let progressBar = document.getElementById('progressBar');
+        if (!progressBar) {
+            progressBar = document.createElement('div');
+            progressBar.id = 'progressBar';
+            progressBar.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 0, 0, 0.9);
+                color: white;
+                padding: 20px;
+                border-radius: 10px;
+                z-index: 10000;
+                text-align: center;
+            `;
+            document.body.appendChild(progressBar);
+        }
+
+        progressBar.innerHTML = `
+            <div style="margin-bottom: 10px;">Generating music... ${Math.round(percentage)}%</div>
+            <div style="width: 200px; height: 4px; background: #333; border-radius: 2px; overflow: hidden;">
+                <div style="width: ${percentage}%; height: 100%; background: #ff6b35; transition: width 0.3s ease;"></div>
+            </div>
+        `;
+
+        if (percentage >= 100) {
+            setTimeout(() => {
+                if (progressBar.parentNode) {
+                    progressBar.parentNode.removeChild(progressBar);
+                }
+            }, 1000);
+        }
+    }
+
+    showError(message) {
+        this.showMessage(message, 'error');
+    }
+
+    showMessage(message, type = 'info') {
+        // Create message container if it doesn't exist
+        let messageContainer = document.getElementById('messageContainer');
+        if (!messageContainer) {
+            messageContainer = document.createElement('div');
+            messageContainer.id = 'messageContainer';
+            messageContainer.className = 'message-container';
+            document.body.appendChild(messageContainer);
+        }
+
+        // Create message element
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.textContent = message;
+        
+        // Add to container
+        messageContainer.appendChild(messageDiv);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.parentNode.removeChild(messageDiv);
+            }
+        }, 5000);
+    }
+
+    showDemoMode() {
+        // Show demo with sample audio
+        this.showRecordingStatus('Demo mode - Click record to try the system!', 'demo');
+        
+        // You can add demo functionality here
+        console.log('Demo mode activated');
+    }
+}
+
+// Initialize MusicGen Integration when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.musicGenIntegration = new MusicGenIntegration();
+});
+
+// Export for use in other scripts
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = MusicGenIntegration;
+}
