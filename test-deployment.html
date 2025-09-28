@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deployment Test - HumGod</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .test-box {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px auto;
+            max-width: 500px;
+            backdrop-filter: blur(10px);
+        }
+        .timestamp {
+            font-size: 18px;
+            margin: 20px 0;
+            color: #ffd700;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-box">
+        <h1>🚀 Deployment Test</h1>
+        <p>If you can see this page, Vercel is working!</p>
+        <div class="timestamp">
+            Deployed: <span id="timestamp"></span>
+        </div>
+        <div class="success">
+            ✅ Vercel deployment successful!
+        </div>
+        <p><a href="/" style="color: #ffd700;">← Back to HumGod</a></p>
+    </div>
+
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+    </script>
+</body>
+</html>
