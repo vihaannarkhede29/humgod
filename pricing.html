@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HumGod Pricing - Turn Your Hums into Music</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .pricing-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 100px 0;
+            text-align: center;
+        }
+        
+        .pricing-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+        
+        .pricing-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+        
+        .pricing-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .pricing-card.featured {
+            border: 3px solid #ff6b35;
+            transform: scale(1.05);
+        }
+        
+        .pricing-card.featured::before {
+            content: "Most Popular";
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff6b35;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .plan-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .plan-price {
+            font-size: 48px;
+            font-weight: 800;
+            color: #ff6b35;
+            margin-bottom: 5px;
+        }
+        
+        .plan-period {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        
+        .plan-features {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 30px;
+        }
+        
+        .plan-features li {
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .plan-features li:last-child {
+            border-bottom: none;
+        }
+        
+        .plan-features i {
+            color: #4CAF50;
+            margin-right: 10px;
+            width: 20px;
+        }
+        
+        .plan-features .unavailable {
+            color: #ccc;
+        }
+        
+        .plan-features .unavailable i {
+            color: #ccc;
+        }
+        
+        .cta-button {
+            width: 100%;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .cta-button.primary {
+            background: #ff6b35;
+            color: white;
+        }
+        
+        .cta-button.primary:hover {
+            background: #e55a2b;
+            transform: translateY(-2px);
+        }
+        
+        .cta-button.secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #ddd;
+        }
+        
+        .cta-button.secondary:hover {
+            background: #e9ecef;
+        }
+        
+        .faq-section {
+            background: #f8f9fa;
+            padding: 80px 0;
+            margin-top: 80px;
+        }
+        
+        .faq-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .faq-item {
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .faq-question {
+            padding: 20px;
+            background: #f8f9fa;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+        
+        .faq-answer {
+            padding: 20px;
+            display: none;
+        }
+        
+        .faq-answer.active {
+            display: block;
+        }
+        
+        .usage-display {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .usage-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+        
+        .usage-stat {
+            text-align: center;
+        }
+        
+        .usage-stat .number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1976d2;
+        }
+        
+        .usage-stat .label {
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-music"></i>
+                <span>HumGod</span>
+            </div>
+            <div class="nav-menu">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="try-it-now.html" class="nav-link">Try It Now</a>
+                <a href="pricing.html" class="nav-link active">Pricing</a>
+                <a href="waitlist.html" class="nav-link">Join Waitlist</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="pricing-hero">
+        <div class="pricing-container">
+            <h1>Simple, Transparent Pricing</h1>
+            <p>Choose the plan that fits your creative needs</p>
+            
+            <div class="usage-display" id="usageDisplay" style="display: none;">
+                <h3>Your Current Usage</h3>
+                <div class="usage-stats">
+                    <div class="usage-stat">
+                        <div class="number" id="generationsUsed">0</div>
+                        <div class="label">Generations Today</div>
+                    </div>
+                    <div class="usage-stat">
+                        <div class="number" id="secondsUsed">0</div>
+                        <div class="label">Seconds Generated</div>
+                    </div>
+                    <div class="usage-stat">
+                        <div class="number" id="remainingGenerations">3</div>
+                        <div class="label">Remaining (Free)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="pricing-container" style="padding: 80px 20px;">
+        <div class="pricing-grid">
+            <!-- Free Plan -->
+            <div class="pricing-card">
+                <div class="plan-name">Free</div>
+                <div class="plan-price">$0</div>
+                <div class="plan-period">forever</div>
+                <ul class="plan-features">
+                    <li><i class="fas fa-check"></i> 3 generations per day</li>
+                    <li><i class="fas fa-check"></i> Up to 15 seconds per clip</li>
+                    <li><i class="fas fa-check"></i> Piano, Guitar, Drums</li>
+                    <li><i class="fas fa-check"></i> Basic quality</li>
+                    <li><i class="fas fa-times unavailable"></i> No commercial use</li>
+                    <li><i class="fas fa-times unavailable"></i> Watermarked audio</li>
+                </ul>
+                <button class="cta-button secondary" onclick="startFreeTrial()">Start Free</button>
+            </div>
+
+            <!-- Premium Plan -->
+            <div class="pricing-card featured">
+                <div class="plan-name">Premium</div>
+                <div class="plan-price">$9.99</div>
+                <div class="plan-period">per month</div>
+                <ul class="plan-features">
+                    <li><i class="fas fa-check"></i> Unlimited generations</li>
+                    <li><i class="fas fa-check"></i> Up to 60 seconds per clip</li>
+                    <li><i class="fas fa-check"></i> All instruments + styles</li>
+                    <li><i class="fas fa-check"></i> High quality audio</li>
+                    <li><i class="fas fa-check"></i> No watermarks</li>
+                    <li><i class="fas fa-check"></i> Commercial use rights</li>
+                </ul>
+                <button class="cta-button primary" onclick="upgradeToPremium()">Upgrade Now</button>
+            </div>
+
+            <!-- Pro Plan -->
+            <div class="pricing-card">
+                <div class="plan-name">Pro</div>
+                <div class="plan-price">$19.99</div>
+                <div class="plan-period">per month</div>
+                <ul class="plan-features">
+                    <li><i class="fas fa-check"></i> Everything in Premium</li>
+                    <li><i class="fas fa-check"></i> Up to 3 minutes per clip</li>
+                    <li><i class="fas fa-check"></i> Priority processing</li>
+                    <li><i class="fas fa-check"></i> API access</li>
+                    <li><i class="fas fa-check"></i> White-label options</li>
+                    <li><i class="fas fa-check"></i> Priority support</li>
+                </ul>
+                <button class="cta-button primary" onclick="upgradeToPro()">Go Pro</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="faq-section">
+        <div class="faq-container">
+            <h2 style="text-align: center; margin-bottom: 40px;">Frequently Asked Questions</h2>
+            
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>How does the free tier work?</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Free users get 3 music generations per day, with each clip limited to 15 seconds. You can use Piano, Guitar, and Drums instruments. Perfect for trying out HumGod!</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>What happens when I reach my daily limit?</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>You'll see a message encouraging you to upgrade to Premium for unlimited generations. Your limit resets every 24 hours.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Can I cancel anytime?</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>Yes! You can cancel your subscription anytime. You'll continue to have access to Premium features until the end of your billing period.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>What payment methods do you accept?</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p>We accept all major credit cards, PayPal, and Apple Pay. All payments are processed securely through Stripe.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // FAQ toggle functionality
+        function toggleFAQ(element) {
+            const answer = element.nextElementSibling;
+            const icon = element.querySelector('i');
+            
+            if (answer.classList.contains('active')) {
+                answer.classList.remove('active');
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                answer.classList.add('active');
+                icon.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // Check user usage on page load
+        function checkUsage() {
+            const userId = localStorage.getItem('humgod_user_id') || 'anonymous';
+            
+            fetch('/api/usage-tracking', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.usage) {
+                    document.getElementById('generationsUsed').textContent = data.usage.generations;
+                    document.getElementById('secondsUsed').textContent = data.usage.totalSeconds;
+                    document.getElementById('remainingGenerations').textContent = Math.max(0, 3 - data.usage.generations);
+                    document.getElementById('usageDisplay').style.display = 'block';
+                }
+            })
+            .catch(error => console.log('Usage check failed:', error));
+        }
+
+        // Plan upgrade functions
+        function startFreeTrial() {
+            window.location.href = 'try-it-now.html';
+        }
+
+        function upgradeToPremium() {
+            // In production, integrate with Stripe
+            alert('Premium upgrade coming soon! For now, enjoy the free tier.');
+        }
+
+        function upgradeToPro() {
+            // In production, integrate with Stripe
+            alert('Pro upgrade coming soon! For now, enjoy the free tier.');
+        }
+
+        // Check usage on page load
+        document.addEventListener('DOMContentLoaded', checkUsage);
+    </script>
+</body>
+</html>

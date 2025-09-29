@@ -1,5 +1,54 @@
 const fetch = require('node-fetch');
 
+// Simple in-memory usage tracking (in production, use a real database)
+const usageDB = new Map();
+
+// Track user usage
+function trackUsage(userId, generationLength) {
+    const today = new Date().toDateString();
+    const key = `${userId}-${today}`;
+    
+    if (!usageDB.has(key)) {
+        usageDB.set(key, {
+            userId,
+            date: today,
+            generations: 0,
+            totalSeconds: 0,
+            isPremium: false
+        });
+    }
+    
+    const usage = usageDB.get(key);
+    usage.generations++;
+    usage.totalSeconds += generationLength;
+    
+    return usage;
+}
+
+// Check if user can generate (free tier limits)
+function canGenerate(userId, generationLength) {
+    const usage = trackUsage(userId, generationLength);
+    
+    // Free tier limits
+    if (!usage.isPremium) {
+        if (usage.generations >= 3) {
+            return { allowed: false, reason: 'Daily limit reached (3 generations)' };
+        }
+        if (generationLength > 15) {
+            return { allowed: false, reason: 'Free tier limited to 15 seconds' };
+        }
+    }
+    
+    return { allowed: true };
+}
+
+// Get user's current usage
+function getUserUsage(userId) {
+    const today = new Date().toDateString();
+    const key = `${userId}-${today}`;
+    return usageDB.get(key) || { generations: 0, totalSeconds: 0, isPremium: false };
+}
+
 // Real MusicGen API call using Replicate (actually works!)
 async function callRealMusicGen(audioData, instrument, duration) {
     try {
@@ -129,10 +178,22 @@ module.exports = async (req, res) => {
     }
     
     try {
-        const { audioData, instrument = 'piano', duration = '10', style = 'classical' } = req.body;
+        const { audioData, instrument = 'piano', duration = '10', style = 'classical', userId = 'anonymous' } = req.body;
         
         if (!audioData) {
             return res.status(400).json({ error: 'No audio data provided' });
+        }
+        
+        // Check usage limits
+        const generationLength = parseInt(duration) || 10;
+        const usageCheck = canGenerate(userId, generationLength);
+        
+        if (!usageCheck.allowed) {
+            return res.status(429).json({ 
+                error: 'Usage limit exceeded',
+                reason: usageCheck.reason,
+                upgrade: 'Upgrade to Premium for unlimited generations!'
+            });
         }
         
         console.log(`Generating ${instrument} music from base64 audio data`);
@@ -157,11 +218,15 @@ module.exports = async (req, res) => {
         // Fallback to realistic mock audio
         const mockAudio = generateMockAudio(instrument, duration);
         
+        // Track usage
+        trackUsage(userId, generationLength);
+        
         return res.json({
             success: true,
             audioData: mockAudio,
             isMock: true,
-            message: 'Using realistic mock audio (Free MusicGen coming soon!)'
+            message: 'Using realistic mock audio (Free MusicGen coming soon!)',
+            usage: getUserUsage(userId)
         });
         
     } catch (error) {
