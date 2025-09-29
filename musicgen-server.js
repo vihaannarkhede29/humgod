@@ -37,21 +37,79 @@ function generateMockAudio(instrument, duration) {
     header.write('data', 36);
     header.writeUInt32LE(dataSize, 40);
     
-    // Generate simple audio data (sine wave with different frequencies for different instruments)
+    // Generate more realistic audio data with multiple frequencies and harmonics
     const audioData = Buffer.alloc(dataSize);
-    const frequencies = {
-        piano: 440, // A4
-        guitar: 330, // E4
-        violin: 880, // A5
-        synth: 220, // A3
-        drums: 100, // Low frequency for drums
-        bass: 110   // A2
+    const instrumentConfigs = {
+        piano: { 
+            frequencies: [440, 880, 1320], // A4, A5, E6
+            harmonics: [0.8, 0.4, 0.2],
+            envelope: 'piano'
+        },
+        guitar: { 
+            frequencies: [330, 440, 660], // E4, A4, E5
+            harmonics: [0.9, 0.6, 0.3],
+            envelope: 'guitar'
+        },
+        violin: { 
+            frequencies: [880, 1320, 1760], // A5, E6, A6
+            harmonics: [1.0, 0.7, 0.4],
+            envelope: 'violin'
+        },
+        synth: { 
+            frequencies: [220, 440, 880], // A3, A4, A5
+            harmonics: [0.6, 0.8, 0.4],
+            envelope: 'synth'
+        },
+        drums: { 
+            frequencies: [60, 120, 240], // Low frequencies for drums
+            harmonics: [1.0, 0.5, 0.2],
+            envelope: 'drums'
+        },
+        bass: { 
+            frequencies: [110, 220, 330], // A2, A3, E4
+            harmonics: [1.0, 0.6, 0.3],
+            envelope: 'bass'
+        }
     };
     
-    const frequency = frequencies[instrument] || 440;
+    const config = instrumentConfigs[instrument] || instrumentConfigs.piano;
     
     for (let i = 0; i < numSamples; i++) {
-        const sample = Math.sin(2 * Math.PI * frequency * i / sampleRate) * 0.3;
+        let sample = 0;
+        const time = i / sampleRate;
+        
+        // Generate multiple frequencies with harmonics
+        for (let j = 0; j < config.frequencies.length; j++) {
+            const freq = config.frequencies[j];
+            const harmonic = config.harmonics[j];
+            const wave = Math.sin(2 * Math.PI * freq * time) * harmonic;
+            
+            // Apply envelope based on instrument
+            let envelope = 1.0;
+            if (config.envelope === 'piano') {
+                envelope = Math.exp(-time * 2) * (1 - Math.exp(-time * 20));
+            } else if (config.envelope === 'guitar') {
+                envelope = Math.exp(-time * 1.5) * (1 - Math.exp(-time * 15));
+            } else if (config.envelope === 'violin') {
+                envelope = Math.exp(-time * 0.8) * (1 - Math.exp(-time * 10));
+            } else if (config.envelope === 'synth') {
+                envelope = 0.8 + 0.2 * Math.sin(2 * Math.PI * 0.5 * time);
+            } else if (config.envelope === 'drums') {
+                envelope = Math.exp(-time * 8) * (1 - Math.exp(-time * 50));
+            } else if (config.envelope === 'bass') {
+                envelope = Math.exp(-time * 1.2) * (1 - Math.exp(-time * 12));
+            }
+            
+            sample += wave * envelope;
+        }
+        
+        // Add some noise for realism
+        if (config.envelope === 'drums') {
+            sample += (Math.random() - 0.5) * 0.1;
+        }
+        
+        // Normalize and convert to 16-bit integer
+        sample = Math.max(-1, Math.min(1, sample * 0.3));
         const intSample = Math.round(sample * 32767);
         audioData.writeInt16LE(intSample, i * 2);
     }
@@ -161,6 +219,8 @@ app.post('/generate-music', upload.single('audio'), async (req, res) => {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('MusicGen API error:', response.status, errorText);
+            console.log('Note: MusicGen models may not be available through Hugging Face Inference API');
+            console.log('Consider using alternative services like Suno, Udio, or local MusicGen deployment');
             
             // Fallback: Generate mock audio for testing
             console.log('Using fallback mock audio generation...');
@@ -169,7 +229,7 @@ app.post('/generate-music', upload.single('audio'), async (req, res) => {
                 success: true, 
                 audioData: mockAudio,
                 isMock: true,
-                message: 'Using mock audio (MusicGen API unavailable)'
+                message: 'Using mock audio (MusicGen API unavailable - consider using Suno, Udio, or local deployment)'
             });
         }
 
@@ -249,6 +309,8 @@ app.post('/generate-music-base64', async (req, res) => {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('MusicGen API error:', response.status, errorText);
+            console.log('Note: MusicGen models may not be available through Hugging Face Inference API');
+            console.log('Consider using alternative services like Suno, Udio, or local MusicGen deployment');
             
             // Fallback: Generate mock audio for testing
             console.log('Using fallback mock audio generation...');
@@ -257,7 +319,7 @@ app.post('/generate-music-base64', async (req, res) => {
                 success: true, 
                 audioData: mockAudio,
                 isMock: true,
-                message: 'Using mock audio (MusicGen API unavailable)'
+                message: 'Using mock audio (MusicGen API unavailable - consider using Suno, Udio, or local deployment)'
             });
         }
 
