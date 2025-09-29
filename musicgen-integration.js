@@ -311,8 +311,15 @@ class MusicGenIntegration {
             this.updateProgress(90, 'Converting audio...');
 
             // Convert base64 back to blob
-            const generatedBlob = this.base64ToBlob(result.audioData, 'audio/wav');
+            const generatedBlob = this.base64ToBlob(result.audioData, 'audio/wav; codecs="1"');
             this.generatedAudio = generatedBlob;
+            
+            // Debug: Log blob details
+            console.log('Generated blob details:', {
+                size: generatedBlob.size,
+                type: generatedBlob.type,
+                isMock: result.isMock
+            });
 
             this.updateProgress(100, 'Complete!');
             
@@ -430,7 +437,7 @@ class MusicGenIntegration {
 
             // Create audio element for playback
             const audioUrl = URL.createObjectURL(this.generatedAudio);
-            const audio = new Audio(audioUrl);
+            const audio = new Audio();
             
             // Set audio properties
             audio.volume = 0.8;
@@ -451,6 +458,14 @@ class MusicGenIntegration {
 
             audio.onerror = (error) => {
                 console.error('Audio playback error:', error);
+                console.error('Audio error details:', {
+                    error: error,
+                    src: audio.src,
+                    networkState: audio.networkState,
+                    readyState: audio.readyState,
+                    errorCode: audio.error ? audio.error.code : 'no error code',
+                    errorMessage: audio.error ? audio.error.message : 'no error message'
+                });
                 this.showError('Failed to play generated audio.');
                 this.isPlaying = false;
                 this.updatePlayButton(false);
@@ -462,19 +477,33 @@ class MusicGenIntegration {
                 await this.audioContext.resume();
             }
             
+            // Set the source and wait for it to load
+            audio.src = audioUrl;
+            
+            // Wait for audio to be ready
+            console.log('Waiting for audio to load...');
+            await new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('Audio load timeout'));
+                }, 10000); // 10 second timeout
+                
+                audio.addEventListener('canplay', () => {
+                    clearTimeout(timeout);
+                    console.log('Audio is ready to play');
+                    resolve();
+                }, { once: true });
+                
+                audio.addEventListener('error', (error) => {
+                    clearTimeout(timeout);
+                    console.error('Audio load error:', error);
+                    reject(error);
+                }, { once: true });
+            });
+            
             // Try to play the audio
             console.log('Attempting to play audio...', audio);
             console.log('Audio ready state:', audio.readyState);
             console.log('Audio network state:', audio.networkState);
-            
-            // Wait for audio to be ready
-            if (audio.readyState < 2) {
-                console.log('Waiting for audio to load...');
-                await new Promise((resolve) => {
-                    audio.addEventListener('canplay', resolve, { once: true });
-                    audio.addEventListener('error', resolve, { once: true });
-                });
-            }
             
             const playPromise = audio.play();
             
