@@ -143,11 +143,12 @@ app.use((req, res, next) => {
     }
 });
 
-// MusicGen API configuration
+// MusicGen API configuration - Using Replicate API
 const MUSICGEN_CONFIG = {
-    apiUrl: 'https://api-inference.huggingface.co/models/facebook/musicgen-stereo-melody-large',
-    apiKey: process.env.HUGGING_FACE_API_KEY || 'YOUR_HUGGING_FACE_API_KEY',
-    timeout: 30000 // 30 seconds timeout
+    apiUrl: 'https://api.replicate.com/v1/predictions',
+    apiKey: process.env.REPLICATE_API_TOKEN || 'YOUR_REPLICATE_API_TOKEN',
+    model: 'meta/musicgen:7a76a8258b3f54f6731a567f2e2cde7e5b9e5a5f',
+    timeout: 60000 // 60 seconds timeout for music generation
 };
 
 // Instrument-specific prompts for better results
@@ -174,9 +175,9 @@ app.post('/generate-music', upload.single('audio'), async (req, res) => {
             return res.status(400).json({ error: 'No audio file provided' });
         }
 
-        if (!MUSICGEN_CONFIG.apiKey || MUSICGEN_CONFIG.apiKey === 'YOUR_HUGGING_FACE_API_KEY') {
+        if (!MUSICGEN_CONFIG.apiKey || MUSICGEN_CONFIG.apiKey === 'YOUR_REPLICATE_API_TOKEN') {
             return res.status(500).json({ 
-                error: 'MusicGen API key not configured. Please set HUGGING_FACE_API_KEY environment variable.' 
+                error: 'Replicate API key not configured. Please set REPLICATE_API_TOKEN environment variable.' 
             });
         }
 
@@ -188,25 +189,24 @@ app.post('/generate-music', upload.single('audio'), async (req, res) => {
         // Convert audio buffer to base64 for JSON payload
         const audioBase64 = req.file.buffer.toString('base64');
         
-        // Create JSON payload for MusicGen API
+        // Create Replicate API payload
         const payload = {
-            inputs: prompt,
-            parameters: {
-                max_new_tokens: 256,
-                temperature: 0.7,
-                top_p: 0.9,
-                do_sample: true
+            version: MUSICGEN_CONFIG.model,
+            input: {
+                prompt: prompt,
+                duration: parseInt(duration) || 10,
+                model_version: 'melody'
             }
         };
 
-        // Make request to MusicGen API
-        console.log('🎵 Making request to MusicGen API:', MUSICGEN_CONFIG.apiUrl);
+        // Make request to Replicate API
+        console.log('🎵 Making request to Replicate API:', MUSICGEN_CONFIG.apiUrl);
         console.log('🎵 Payload:', JSON.stringify(payload, null, 2));
         
         const response = await fetch(MUSICGEN_CONFIG.apiUrl, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${MUSICGEN_CONFIG.apiKey}`,
+                'Authorization': `Token ${MUSICGEN_CONFIG.apiKey}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload),
@@ -218,8 +218,8 @@ app.post('/generate-music', upload.single('audio'), async (req, res) => {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('MusicGen API error:', response.status, errorText);
-            console.log('Note: MusicGen models may not be available through Hugging Face Inference API');
+            console.error('Replicate API error:', response.status, errorText);
+            console.log('Note: Replicate API may require authentication or have usage limits');
             console.log('Consider using alternative services like Suno, Udio, or local MusicGen deployment');
             
             // Fallback: Generate mock audio for testing
@@ -229,22 +229,58 @@ app.post('/generate-music', upload.single('audio'), async (req, res) => {
                 success: true, 
                 audioData: mockAudio,
                 isMock: true,
-                message: 'Using mock audio (MusicGen API unavailable - consider using Suno, Udio, or local deployment)'
+                message: 'Using mock audio (Replicate API unavailable - consider using Suno, Udio, or local deployment)'
             });
         }
 
-        // Get the generated audio
-        const audioBuffer = await response.buffer();
+        // Replicate returns a prediction object, we need to poll for completion
+        const prediction = await response.json();
+        console.log('🎵 Prediction created:', prediction.id);
         
-        // Set appropriate headers for audio response
-        res.set({
-            'Content-Type': 'audio/wav',
-            'Content-Length': audioBuffer.length,
-            'Content-Disposition': `attachment; filename="generated_${instrument}_music.wav"`
-        });
+        // Poll for completion
+        let completed = false;
+        let attempts = 0;
+        const maxAttempts = 30; // 5 minutes max
+        
+        while (!completed && attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
+            
+            const statusResponse = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
+                headers: {
+                    'Authorization': `Token ${MUSICGEN_CONFIG.apiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const status = await statusResponse.json();
+            console.log('🎵 Prediction status:', status.status);
+            
+            if (status.status === 'succeeded') {
+                // Download the generated audio
+                const audioResponse = await fetch(status.output);
+                const audioBuffer = await audioResponse.buffer();
+                completed = true;
+                
+                // Set appropriate headers for audio response
+                res.set({
+                    'Content-Type': 'audio/wav',
+                    'Content-Length': audioBuffer.length,
+                    'Content-Disposition': `attachment; filename="generated_${instrument}_music.wav"`
+                });
 
-        res.send(audioBuffer);
-        console.log(`Successfully generated ${instrument} music (${audioBuffer.length} bytes)`);
+                res.send(audioBuffer);
+                console.log(`Successfully generated ${instrument} music (${audioBuffer.length} bytes)`);
+                return;
+            } else if (status.status === 'failed') {
+                throw new Error(`Music generation failed: ${status.error}`);
+            }
+            
+            attempts++;
+        }
+        
+        if (!completed) {
+            throw new Error('Music generation timed out');
+        }
 
     } catch (error) {
         console.error('Error generating music:', error);
@@ -264,9 +300,9 @@ app.post('/generate-music-base64', async (req, res) => {
             return res.status(400).json({ error: 'No audio data provided' });
         }
 
-        if (!MUSICGEN_CONFIG.apiKey || MUSICGEN_CONFIG.apiKey === 'YOUR_HUGGING_FACE_API_KEY') {
+        if (!MUSICGEN_CONFIG.apiKey || MUSICGEN_CONFIG.apiKey === 'YOUR_REPLICATE_API_TOKEN') {
             return res.status(500).json({ 
-                error: 'MusicGen API key not configured. Please set HUGGING_FACE_API_KEY environment variable.' 
+                error: 'Replicate API key not configured. Please set REPLICATE_API_TOKEN environment variable.' 
             });
         }
 
@@ -278,25 +314,24 @@ app.post('/generate-music-base64', async (req, res) => {
         // Create enhanced prompt
         const prompt = createEnhancedPrompt(instrument, style);
         
-        // Create JSON payload for MusicGen API
+        // Create Replicate API payload
         const payload = {
-            inputs: prompt,
-            parameters: {
-                max_new_tokens: 256,
-                temperature: 0.7,
-                top_p: 0.9,
-                do_sample: true
+            version: MUSICGEN_CONFIG.model,
+            input: {
+                prompt: prompt,
+                duration: parseInt(duration) || 10,
+                model_version: 'melody'
             }
         };
 
-        // Make request to MusicGen API
-        console.log('🎵 Making request to MusicGen API:', MUSICGEN_CONFIG.apiUrl);
+        // Make request to Replicate API
+        console.log('🎵 Making request to Replicate API:', MUSICGEN_CONFIG.apiUrl);
         console.log('🎵 Payload:', JSON.stringify(payload, null, 2));
         
         const response = await fetch(MUSICGEN_CONFIG.apiUrl, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${MUSICGEN_CONFIG.apiKey}`,
+                'Authorization': `Token ${MUSICGEN_CONFIG.apiKey}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload),
@@ -308,8 +343,8 @@ app.post('/generate-music-base64', async (req, res) => {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('MusicGen API error:', response.status, errorText);
-            console.log('Note: MusicGen models may not be available through Hugging Face Inference API');
+            console.error('Replicate API error:', response.status, errorText);
+            console.log('Note: Replicate API may require authentication or have usage limits');
             console.log('Consider using alternative services like Suno, Udio, or local MusicGen deployment');
             
             // Fallback: Generate mock audio for testing
@@ -319,25 +354,59 @@ app.post('/generate-music-base64', async (req, res) => {
                 success: true, 
                 audioData: mockAudio,
                 isMock: true,
-                message: 'Using mock audio (MusicGen API unavailable - consider using Suno, Udio, or local deployment)'
+                message: 'Using mock audio (Replicate API unavailable - consider using Suno, Udio, or local deployment)'
             });
         }
 
-        // Get the generated audio
-        const generatedAudioBuffer = await response.buffer();
+        // Replicate returns a prediction object, we need to poll for completion
+        const prediction = await response.json();
+        console.log('🎵 Prediction created:', prediction.id);
         
-        // Return as base64 for easier handling in frontend
-        const base64Audio = generatedAudioBuffer.toString('base64');
+        // Poll for completion
+        let completed = false;
+        let attempts = 0;
+        const maxAttempts = 30; // 5 minutes max
         
-        res.json({
-            success: true,
-            audioData: base64Audio,
-            instrument: instrument,
-            duration: duration,
-            size: generatedAudioBuffer.length
-        });
-
-        console.log(`Successfully generated ${instrument} music (${generatedAudioBuffer.length} bytes)`);
+        while (!completed && attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
+            
+            const statusResponse = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
+                headers: {
+                    'Authorization': `Token ${MUSICGEN_CONFIG.apiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const status = await statusResponse.json();
+            console.log('🎵 Prediction status:', status.status);
+            
+            if (status.status === 'succeeded') {
+                // Download the generated audio
+                const audioResponse = await fetch(status.output);
+                const generatedAudioBuffer = await audioResponse.buffer();
+                completed = true;
+                
+                // Return as base64 for easier handling in frontend
+                const base64Audio = generatedAudioBuffer.toString('base64');
+                
+                res.json({
+                    success: true,
+                    audioData: base64Audio,
+                    instrument: instrument,
+                    duration: duration,
+                    size: generatedAudioBuffer.length
+                });
+                return;
+            } else if (status.status === 'failed') {
+                throw new Error(`Music generation failed: ${status.error}`);
+            }
+            
+            attempts++;
+        }
+        
+        if (!completed) {
+            throw new Error('Music generation timed out');
+        }
 
     } catch (error) {
         console.error('Error generating music:', error);

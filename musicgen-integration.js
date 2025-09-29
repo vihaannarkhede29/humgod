@@ -16,7 +16,7 @@ class MusicGenIntegration {
         
         // MusicGen API configuration
         this.musicGenConfig = {
-            serverUrl: 'http://localhost:3001', // Local server for MusicGen API
+            serverUrl: '/api', // Vercel API endpoint
             apiUrl: 'https://api-inference.huggingface.co/models/facebook/musicgen-stereo-melody-large',
             apiKey: 'YOUR_HUGGING_FACE_API_KEY', // Replace with your actual API key
             model: 'facebook/musicgen-stereo-melody-large'
@@ -286,7 +286,7 @@ class MusicGenIntegration {
             };
 
             // Make API request to our server
-            const response = await fetch(`${this.musicGenConfig.serverUrl}/generate-music-base64`, {
+                const response = await fetch(`${this.musicGenConfig.serverUrl}/generate-music`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
