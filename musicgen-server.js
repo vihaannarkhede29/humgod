@@ -87,7 +87,7 @@ app.use((req, res, next) => {
 
 // MusicGen API configuration
 const MUSICGEN_CONFIG = {
-    apiUrl: 'https://api-inference.huggingface.co/models/facebook/musicgen-small',
+    apiUrl: 'https://api-inference.huggingface.co/models/facebook/musicgen-stereo-melody-large',
     apiKey: process.env.HUGGING_FACE_API_KEY || 'YOUR_HUGGING_FACE_API_KEY',
     timeout: 30000 // 30 seconds timeout
 };
@@ -134,15 +134,17 @@ app.post('/generate-music', upload.single('audio'), async (req, res) => {
         const payload = {
             inputs: prompt,
             parameters: {
-                duration: parseFloat(duration) || 10,
-                top_k: 250,
-                top_p: 0.0,
-                temperature: 1.0,
-                cfg_coef: 3.5
+                max_new_tokens: 256,
+                temperature: 0.7,
+                top_p: 0.9,
+                do_sample: true
             }
         };
 
         // Make request to MusicGen API
+        console.log('🎵 Making request to MusicGen API:', MUSICGEN_CONFIG.apiUrl);
+        console.log('🎵 Payload:', JSON.stringify(payload, null, 2));
+        
         const response = await fetch(MUSICGEN_CONFIG.apiUrl, {
             method: 'POST',
             headers: {
@@ -152,6 +154,9 @@ app.post('/generate-music', upload.single('audio'), async (req, res) => {
             body: JSON.stringify(payload),
             timeout: MUSICGEN_CONFIG.timeout
         });
+        
+        console.log('🎵 Response status:', response.status);
+        console.log('🎵 Response headers:', Object.fromEntries(response.headers.entries()));
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -217,15 +222,17 @@ app.post('/generate-music-base64', async (req, res) => {
         const payload = {
             inputs: prompt,
             parameters: {
-                duration: parseFloat(duration) || 10,
-                top_k: 250,
-                top_p: 0.0,
-                temperature: 1.0,
-                cfg_coef: 3.5
+                max_new_tokens: 256,
+                temperature: 0.7,
+                top_p: 0.9,
+                do_sample: true
             }
         };
 
         // Make request to MusicGen API
+        console.log('🎵 Making request to MusicGen API:', MUSICGEN_CONFIG.apiUrl);
+        console.log('🎵 Payload:', JSON.stringify(payload, null, 2));
+        
         const response = await fetch(MUSICGEN_CONFIG.apiUrl, {
             method: 'POST',
             headers: {
@@ -235,6 +242,9 @@ app.post('/generate-music-base64', async (req, res) => {
             body: JSON.stringify(payload),
             timeout: MUSICGEN_CONFIG.timeout
         });
+        
+        console.log('🎵 Response status:', response.status);
+        console.log('🎵 Response headers:', Object.fromEntries(response.headers.entries()));
 
         if (!response.ok) {
             const errorText = await response.text();
