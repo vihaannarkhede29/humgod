@@ -29,13 +29,13 @@ function trackUsage(userId, generationLength) {
 function canGenerate(userId, generationLength) {
     const usage = trackUsage(userId, generationLength);
     
-    // Free tier limits
+    // Free tier limits - only mock audio, no real API calls
     if (!usage.isPremium) {
         if (usage.generations >= 3) {
-            return { allowed: false, reason: 'Daily limit reached (3 generations)' };
+            return { allowed: false, reason: 'Daily limit reached (3 generations). Upgrade to Premium for unlimited!' };
         }
         if (generationLength > 15) {
-            return { allowed: false, reason: 'Free tier limited to 15 seconds' };
+            return { allowed: false, reason: 'Free tier limited to 15 seconds. Upgrade to Premium for longer clips!' };
         }
     }
     
@@ -198,21 +198,29 @@ module.exports = async (req, res) => {
         
         console.log(`Generating ${instrument} music from base64 audio data`);
         
-        // Try real MusicGen API first (Replicate)
-        try {
-            const musicGenResult = await callRealMusicGen(audioData, instrument, duration);
-            if (musicGenResult.success) {
-                return res.json({
-                    success: true,
-                    audioData: musicGenResult.audioData,
-                    isMock: false,
-                    message: `🎵 Generated using REAL MusicGen AI! (${musicGenResult.source})`
-                });
-            } else {
-                console.log('Real MusicGen failed:', musicGenResult.error);
+        // Only use real MusicGen for premium users
+        const usage = getUserUsage(userId);
+        
+        if (usage.isPremium) {
+            // Try real MusicGen API for premium users
+            try {
+                const musicGenResult = await callRealMusicGen(audioData, instrument, duration);
+                if (musicGenResult.success) {
+                    trackUsage(userId, generationLength);
+                    return res.json({
+                        success: true,
+                        audioData: musicGenResult.audioData,
+                        isMock: false,
+                        message: `🎵 Generated using REAL MusicGen AI! (${musicGenResult.source})`
+                    });
+                } else {
+                    console.log('Real MusicGen failed for premium user:', musicGenResult.error);
+                }
+            } catch (error) {
+                console.log('Real MusicGen failed for premium user:', error.message);
             }
-        } catch (error) {
-            console.log('Real MusicGen failed, using mock audio:', error.message);
+        } else {
+            console.log('Free user - using mock audio to avoid costs');
         }
         
         // Fallback to realistic mock audio
