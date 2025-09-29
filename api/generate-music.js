@@ -53,13 +53,14 @@ function generateMockAudio(instrument, duration) {
     const dataSize = numSamples * numChannels * (bitsPerSample / 8);
     const fileSize = 44 + dataSize;
     
-    // WAV file header
+    // WAV file header - ensure proper format for browser compatibility
     const header = Buffer.alloc(44);
     header.write('RIFF', 0);
     header.writeUInt32LE(fileSize - 8, 4);
     header.write('WAVE', 8);
-    header.writeUInt32LE(16, 16); // PCM format
-    header.writeUInt16LE(1, 20); // PCM
+    header.write('fmt ', 12); // fmt chunk
+    header.writeUInt32LE(16, 16); // fmt chunk size
+    header.writeUInt16LE(1, 20); // PCM format
     header.writeUInt16LE(numChannels, 22);
     header.writeUInt32LE(sampleRate, 24);
     header.writeUInt32LE(sampleRate * numChannels * (bitsPerSample / 8), 28);

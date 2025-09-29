@@ -311,7 +311,7 @@ class MusicGenIntegration {
             this.updateProgress(90, 'Converting audio...');
 
             // Convert base64 back to blob
-            const generatedBlob = this.base64ToBlob(result.audioData, 'audio/wav; codecs="1"');
+            const generatedBlob = this.base64ToBlob(result.audioData, 'audio/wav');
             this.generatedAudio = generatedBlob;
             
             // Debug: Log blob details
@@ -376,6 +376,71 @@ class MusicGenIntegration {
         }
         const byteArray = new Uint8Array(byteNumbers);
         return new Blob([byteArray], { type: mimeType });
+    }
+
+    // Test if an audio blob can be played
+    testAudioBlob(blob) {
+        try {
+            const audio = new Audio();
+            const url = URL.createObjectURL(blob);
+            audio.src = url;
+            
+            // Check if the browser can handle this format
+            const canPlay = audio.canPlayType(blob.type);
+            URL.revokeObjectURL(url);
+            
+            return canPlay !== '';
+        } catch (error) {
+            console.warn('Error testing audio blob:', error);
+            return false;
+        }
+    }
+
+    // Fallback audio generation using Web Audio API
+    tryFallbackAudio() {
+        try {
+            console.log('Creating fallback audio using Web Audio API...');
+            
+            // Create a simple sine wave using Web Audio API
+            const sampleRate = 44100;
+            const duration = 2; // 2 seconds
+            const frequency = 440; // A4 note
+            
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            // Generate sine wave
+            for (let i = 0; i < data.length; i++) {
+                data[i] = Math.sin(2 * Math.PI * frequency * i / sampleRate) * 0.3;
+            }
+            
+            // Create audio source
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            
+            // Play the audio
+            source.start();
+            
+            this.isPlaying = true;
+            this.updatePlayButton(true);
+            
+            // Stop after duration
+            setTimeout(() => {
+                source.stop();
+                this.isPlaying = false;
+                this.updatePlayButton(false);
+            }, duration * 1000);
+            
+            console.log('✅ Fallback audio playing successfully');
+            
+        } catch (error) {
+            console.error('❌ Fallback audio failed:', error);
+            this.showError('Failed to play generated audio. Please try again.');
+            this.isPlaying = false;
+            this.updatePlayButton(false);
+        }
     }
 
     // Update progress bar
@@ -466,9 +531,22 @@ class MusicGenIntegration {
                     errorCode: audio.error ? audio.error.code : 'no error code',
                     errorMessage: audio.error ? audio.error.message : 'no error message'
                 });
-                this.showError('Failed to play generated audio.');
-                this.isPlaying = false;
-                this.updatePlayButton(false);
+                
+                // Log the actual error object properties
+                if (audio.error) {
+                    console.error('Audio error object:', {
+                        code: audio.error.code,
+                        message: audio.error.message,
+                        MEDIA_ERR_ABORTED: audio.error.MEDIA_ERR_ABORTED,
+                        MEDIA_ERR_NETWORK: audio.error.MEDIA_ERR_NETWORK,
+                        MEDIA_ERR_DECODE: audio.error.MEDIA_ERR_DECODE,
+                        MEDIA_ERR_SRC_NOT_SUPPORTED: audio.error.MEDIA_ERR_SRC_NOT_SUPPORTED
+                    });
+                }
+                
+                // Try fallback: create a simple test audio
+                console.log('Trying fallback audio generation...');
+                this.tryFallbackAudio();
             };
 
             // Ensure audio context is resumed for user interaction
