@@ -184,44 +184,13 @@ module.exports = async (req, res) => {
             return res.status(400).json({ error: 'No audio data provided' });
         }
         
-        // Check usage limits
+        // No usage limits - it's free!
         const generationLength = parseInt(duration) || 10;
-        const usageCheck = canGenerate(userId, generationLength);
-        
-        if (!usageCheck.allowed) {
-            return res.status(429).json({ 
-                error: 'Usage limit exceeded',
-                reason: usageCheck.reason,
-                upgrade: 'Upgrade to Premium for unlimited generations!'
-            });
-        }
         
         console.log(`Generating ${instrument} music from base64 audio data`);
         
-        // Only use real MusicGen for premium users
-        const usage = getUserUsage(userId);
-        
-        if (usage.isPremium) {
-            // Try real MusicGen API for premium users
-            try {
-                const musicGenResult = await callRealMusicGen(audioData, instrument, duration);
-                if (musicGenResult.success) {
-                    trackUsage(userId, generationLength);
-                    return res.json({
-                        success: true,
-                        audioData: musicGenResult.audioData,
-                        isMock: false,
-                        message: `🎵 Generated using REAL MusicGen AI! (${musicGenResult.source})`
-                    });
-                } else {
-                    console.log('Real MusicGen failed for premium user:', musicGenResult.error);
-                }
-            } catch (error) {
-                console.log('Real MusicGen failed for premium user:', error.message);
-            }
-        } else {
-            console.log('Free user - using mock audio to avoid costs');
-        }
+        // Always use mock audio - no API costs!
+        console.log('Using enhanced mock audio - no API costs!');
         
         // Fallback to realistic mock audio
         const mockAudio = generateMockAudio(instrument, duration);
@@ -233,7 +202,7 @@ module.exports = async (req, res) => {
             success: true,
             audioData: mockAudio,
             isMock: true,
-            message: 'Using realistic mock audio (Free MusicGen coming soon!)',
+            message: '🎵 Generated using advanced audio synthesis! (100% Free)',
             usage: getUserUsage(userId)
         });
         
