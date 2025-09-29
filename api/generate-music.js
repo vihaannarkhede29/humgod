@@ -22,15 +22,14 @@ module.exports = async (req, res) => {
         
         console.log(`Generating ${instrument} music from base64 audio data`);
         
-        // For now, return mock audio since we don't have a real MusicGen API key
-        // In the future, this would call the actual MusicGen API
+        // Generate realistic mock audio with proper instrument sounds
         const mockAudio = generateMockAudio(instrument, duration);
         
         return res.json({
             success: true,
             audioData: mockAudio,
             isMock: true,
-            message: 'Using mock audio (Real MusicGen API integration coming soon)'
+            message: 'Using realistic mock audio (To use real MusicGen: get API key from https://replicate.com/account/api-tokens)'
         });
         
     } catch (error) {
@@ -75,33 +74,134 @@ function generateMockAudio(instrument, duration) {
     header.write('data', 36);
     header.writeUInt32LE(dataSize, 40);
     
-    // Generate simple audio data - start with basic sine wave for compatibility
+    // Generate realistic instrument audio data
     const audioData = Buffer.alloc(dataSize);
     
-    // Simple instrument-specific frequencies
-    const instrumentFreqs = {
-        piano: 440,    // A4
-        guitar: 330,   // E4
-        violin: 880,   // A5
-        synth: 220,    // A3
-        drums: 100,    // Low frequency
-        bass: 110      // A2
+    // Instrument-specific configurations
+    const instrumentConfigs = {
+        piano: { 
+            frequencies: [440, 880, 1320], // A4, A5, E6
+            harmonics: [0.8, 0.4, 0.2],
+            envelope: 'piano',
+            attack: 0.1,
+            decay: 0.3,
+            sustain: 0.5,
+            release: 0.8
+        },
+        guitar: { 
+            frequencies: [330, 440, 660], // E4, A4, E5
+            harmonics: [0.9, 0.6, 0.3],
+            envelope: 'guitar',
+            attack: 0.05,
+            decay: 0.2,
+            sustain: 0.7,
+            release: 0.6
+        },
+        violin: { 
+            frequencies: [880, 1320, 1760], // A5, E6, A6
+            harmonics: [1.0, 0.7, 0.4],
+            envelope: 'violin',
+            attack: 0.2,
+            decay: 0.1,
+            sustain: 0.8,
+            release: 0.9
+        },
+        synth: { 
+            frequencies: [220, 440, 880], // A3, A4, A5
+            harmonics: [0.6, 0.8, 0.4],
+            envelope: 'synth',
+            attack: 0.01,
+            decay: 0.1,
+            sustain: 0.9,
+            release: 0.3
+        },
+        drums: { 
+            frequencies: [60, 120, 240], // Low frequencies for drums
+            harmonics: [1.0, 0.5, 0.2],
+            envelope: 'drums',
+            attack: 0.001,
+            decay: 0.1,
+            sustain: 0.1,
+            release: 0.2
+        },
+        bass: { 
+            frequencies: [110, 220, 330], // A2, A3, E4
+            harmonics: [1.0, 0.6, 0.3],
+            envelope: 'bass',
+            attack: 0.05,
+            decay: 0.2,
+            sustain: 0.8,
+            release: 0.7
+        }
     };
     
-    const frequency = instrumentFreqs[instrument] || 440;
+    const config = instrumentConfigs[instrument] || instrumentConfigs.piano;
     
     for (let i = 0; i < numSamples; i++) {
         const time = i / sampleRate;
+        let sample = 0;
         
-        // Simple sine wave with envelope
-        let sample = Math.sin(2 * Math.PI * frequency * time);
+        // Generate multiple frequencies with harmonics
+        for (let j = 0; j < config.frequencies.length; j++) {
+            const freq = config.frequencies[j];
+            const harmonic = config.harmonics[j];
+            
+            // Add some vibrato for realism
+            const vibrato = 1 + 0.05 * Math.sin(2 * Math.PI * 5 * time);
+            const wave = Math.sin(2 * Math.PI * freq * time * vibrato) * harmonic;
+            
+            // Add some harmonic content
+            if (j === 0) {
+                sample += wave;
+                sample += Math.sin(2 * Math.PI * freq * 2 * time) * harmonic * 0.3; // Octave
+                sample += Math.sin(2 * Math.PI * freq * 3 * time) * harmonic * 0.1; // Fifth
+            } else {
+                sample += wave;
+            }
+        }
         
-        // Apply simple envelope (fade in/out)
-        const envelope = Math.exp(-time * 0.5) * (1 - Math.exp(-time * 10));
-        sample *= envelope * 0.3; // Reduce volume
+        // Apply ADSR envelope
+        let envelope = 1.0;
+        if (time < config.attack) {
+            envelope = time / config.attack;
+        } else if (time < config.attack + config.decay) {
+            envelope = 1 - (time - config.attack) / config.decay * (1 - config.sustain);
+        } else if (time < duration - config.release) {
+            envelope = config.sustain;
+        } else {
+            envelope = config.sustain * (duration - time) / config.release;
+        }
         
-        // Convert to 16-bit integer
-        const intSample = Math.max(-32768, Math.min(32767, Math.round(sample * 32767)));
+        // Apply instrument-specific envelope
+        if (config.envelope === 'piano') {
+            envelope *= Math.exp(-time * 2) * (1 - Math.exp(-time * 20));
+        } else if (config.envelope === 'guitar') {
+            envelope *= Math.exp(-time * 1.5) * (1 - Math.exp(-time * 15));
+        } else if (config.envelope === 'violin') {
+            envelope *= Math.exp(-time * 0.8) * (1 - Math.exp(-time * 10));
+        } else if (config.envelope === 'synth') {
+            envelope *= 0.8 + 0.2 * Math.sin(2 * Math.PI * 0.5 * time);
+        } else if (config.envelope === 'drums') {
+            envelope *= Math.exp(-time * 8) * (1 - Math.exp(-time * 50));
+        } else if (config.envelope === 'bass') {
+            envelope *= Math.exp(-time * 1.2) * (1 - Math.exp(-time * 12));
+        }
+        
+        sample *= envelope;
+        
+        // Add some noise for realism
+        if (config.envelope === 'drums') {
+            sample += (Math.random() - 0.5) * 0.1;
+        }
+        
+        // Add some reverb effect
+        if (i > 1000) {
+            sample += audioData.readInt16LE((i - 1000) * 2) * 0.1;
+        }
+        
+        // Normalize and convert to 16-bit integer
+        sample = Math.max(-1, Math.min(1, sample * 0.3));
+        const intSample = Math.round(sample * 32767);
         audioData.writeInt16LE(intSample, i * 2);
     }
     
