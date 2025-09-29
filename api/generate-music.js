@@ -1,61 +1,90 @@
 const fetch = require('node-fetch');
 
-// Real MusicGen API call using working endpoint
+// Real MusicGen API call using Replicate (actually works!)
 async function callRealMusicGen(audioData, instrument, duration) {
     try {
-        console.log('🎵 Attempting real MusicGen conversion...');
+        console.log('🎵 Attempting real MusicGen conversion with Replicate...');
         
-        // Try multiple working MusicGen endpoints
-        const endpoints = [
-            'https://api-inference.huggingface.co/models/facebook/musicgen-small',
-            'https://api-inference.huggingface.co/models/facebook/musicgen-medium',
-            'https://api-inference.huggingface.co/models/facebook/musicgen-large'
-        ];
-        
-        for (const endpoint of endpoints) {
-            try {
-                console.log(`🎵 Trying endpoint: ${endpoint}`);
-                
-                const prompt = createMusicPrompt(instrument, audioData);
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        inputs: prompt,
-                        audio: audioData, // Include the actual audio input
-                        parameters: {
-                            max_new_tokens: 256,
-                            temperature: 0.7,
-                            top_p: 0.9,
-                            do_sample: true
-                        }
-                    })
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('🎵 MusicGen response received:', result);
-                    
-                    if (result.audio) {
-                        return {
-                            success: true,
-                            audioData: result.audio,
-                            source: endpoint
-                        };
-                    }
-                } else {
-                    console.log(`❌ Endpoint ${endpoint} failed: ${response.status}`);
-                }
-            } catch (endpointError) {
-                console.log(`❌ Endpoint ${endpoint} error:`, endpointError.message);
-                continue;
-            }
+        if (!process.env.REPLICATE_API_TOKEN) {
+            console.log('❌ No Replicate API token found');
+            return { success: false, error: 'Replicate API token not configured' };
         }
         
-        throw new Error('All MusicGen endpoints failed');
+        const prompt = createMusicPrompt(instrument, audioData);
+        
+        // Create prediction
+        const response = await fetch('https://api.replicate.com/v1/predictions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                version: '7a76a8258b3f54f6731a567f2e2cde7e5b9e5a5f', // MusicGen model version
+                input: {
+                    prompt: prompt,
+                    melody: audioData, // Base64 audio input
+                    duration: parseInt(duration) || 8,
+                    continuation: false,
+                    model_version: 'stereo-melody-large',
+                    output_format: 'wav',
+                    continuation_start: 0,
+                    multi_band_diffusion: false,
+                    normalization_strategy: 'peak',
+                    classifier_free_guidance: 3
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.log(`❌ Replicate API failed: ${response.status} - ${errorText}`);
+            return { success: false, error: `Replicate API error: ${response.status}` };
+        }
+
+        const prediction = await response.json();
+        console.log('🎵 Replicate prediction created:', prediction.id);
+        
+        // Poll for completion
+        let result = prediction;
+        let attempts = 0;
+        const maxAttempts = 30; // 5 minutes max
+        
+        while (result.status === 'starting' || result.status === 'processing') {
+            if (attempts >= maxAttempts) {
+                return { success: false, error: 'Timeout waiting for MusicGen result' };
+            }
+            
+            console.log(`🎵 Polling attempt ${attempts + 1}, status: ${result.status}`);
+            await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
+            
+            const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
+                headers: {
+                    'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`
+                }
+            });
+            
+            result = await pollResponse.json();
+            attempts++;
+        }
+        
+        if (result.status === 'succeeded' && result.output) {
+            console.log('🎵 MusicGen generation succeeded!');
+            
+            // Convert the output URL to base64
+            const audioResponse = await fetch(result.output);
+            const audioBuffer = await audioResponse.arrayBuffer();
+            const audioBase64 = Buffer.from(audioBuffer).toString('base64');
+            
+            return {
+                success: true,
+                audioData: audioBase64,
+                source: 'Replicate MusicGen'
+            };
+        } else {
+            console.log('❌ MusicGen generation failed:', result);
+            return { success: false, error: result.error || 'MusicGen generation failed' };
+        }
         
     } catch (error) {
         console.error('Real MusicGen error:', error);
@@ -108,7 +137,7 @@ module.exports = async (req, res) => {
         
         console.log(`Generating ${instrument} music from base64 audio data`);
         
-        // Try real MusicGen API first
+        // Try real MusicGen API first (Replicate)
         try {
             const musicGenResult = await callRealMusicGen(audioData, instrument, duration);
             if (musicGenResult.success) {
@@ -116,8 +145,10 @@ module.exports = async (req, res) => {
                     success: true,
                     audioData: musicGenResult.audioData,
                     isMock: false,
-                    message: `Generated using real MusicGen AI! (${musicGenResult.source})`
+                    message: `🎵 Generated using REAL MusicGen AI! (${musicGenResult.source})`
                 });
+            } else {
+                console.log('Real MusicGen failed:', musicGenResult.error);
             }
         } catch (error) {
             console.log('Real MusicGen failed, using mock audio:', error.message);
