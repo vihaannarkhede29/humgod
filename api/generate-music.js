@@ -1,53 +1,71 @@
 const fetch = require('node-fetch');
 
-// Free Hugging Face Spaces API call
-async function callHuggingFaceSpaces(audioData, instrument, duration) {
+// Real MusicGen API call using working endpoint
+async function callRealMusicGen(audioData, instrument, duration) {
     try {
-        const prompt = createMusicPrompt(instrument);
+        console.log('🎵 Attempting real MusicGen conversion...');
         
-        // Hugging Face Spaces API endpoint
-        const response = await fetch('https://api-inference.huggingface.co/models/facebook/musicgen-stereo-melody-large', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                inputs: prompt,
-                parameters: {
-                    max_new_tokens: 256,
-                    temperature: 0.7,
-                    top_p: 0.9,
-                    do_sample: true
+        // Try multiple working MusicGen endpoints
+        const endpoints = [
+            'https://api-inference.huggingface.co/models/facebook/musicgen-small',
+            'https://api-inference.huggingface.co/models/facebook/musicgen-medium',
+            'https://api-inference.huggingface.co/models/facebook/musicgen-large'
+        ];
+        
+        for (const endpoint of endpoints) {
+            try {
+                console.log(`🎵 Trying endpoint: ${endpoint}`);
+                
+                const prompt = createMusicPrompt(instrument, audioData);
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        inputs: prompt,
+                        audio: audioData, // Include the actual audio input
+                        parameters: {
+                            max_new_tokens: 256,
+                            temperature: 0.7,
+                            top_p: 0.9,
+                            do_sample: true
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('🎵 MusicGen response received:', result);
+                    
+                    if (result.audio) {
+                        return {
+                            success: true,
+                            audioData: result.audio,
+                            source: endpoint
+                        };
+                    }
+                } else {
+                    console.log(`❌ Endpoint ${endpoint} failed: ${response.status}`);
                 }
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`HF API error: ${response.status}`);
+            } catch (endpointError) {
+                console.log(`❌ Endpoint ${endpoint} error:`, endpointError.message);
+                continue;
+            }
         }
-
-        const result = await response.json();
         
-        // Convert the result to base64 audio
-        if (result.audio) {
-            return {
-                success: true,
-                audioData: result.audio
-            };
-        } else {
-            throw new Error('No audio data in response');
-        }
+        throw new Error('All MusicGen endpoints failed');
         
     } catch (error) {
-        console.error('Hugging Face Spaces error:', error);
+        console.error('Real MusicGen error:', error);
         return { success: false, error: error.message };
     }
 }
 
-// Create music prompt based on instrument
-function createMusicPrompt(instrument) {
-    const prompts = {
+// Create music prompt based on instrument and audio input
+function createMusicPrompt(instrument, audioData = null) {
+    const basePrompts = {
         piano: 'Generate a beautiful piano melody with classical harmony and emotional depth',
         guitar: 'Create an acoustic guitar arrangement with fingerpicking style and warm tones',
         violin: 'Generate a violin melody with expressive vibrato and classical phrasing',
@@ -56,7 +74,14 @@ function createMusicPrompt(instrument) {
         bass: 'Create a bass line with deep, sustained notes and rhythmic groove'
     };
     
-    return prompts[instrument] || prompts.piano;
+    let prompt = basePrompts[instrument] || basePrompts.piano;
+    
+    // If we have audio data, modify the prompt to reference it
+    if (audioData) {
+        prompt = `Based on the provided audio input (humming/beatboxing/whistling), generate a ${instrument} arrangement that follows the melody, rhythm, and style of the input. ${prompt}`;
+    }
+    
+    return prompt;
 }
 
 // Vercel serverless function for MusicGen API
@@ -83,19 +108,19 @@ module.exports = async (req, res) => {
         
         console.log(`Generating ${instrument} music from base64 audio data`);
         
-        // Try Hugging Face Spaces API first (free)
+        // Try real MusicGen API first
         try {
-            const hfResult = await callHuggingFaceSpaces(audioData, instrument, duration);
-            if (hfResult.success) {
+            const musicGenResult = await callRealMusicGen(audioData, instrument, duration);
+            if (musicGenResult.success) {
                 return res.json({
                     success: true,
-                    audioData: hfResult.audioData,
+                    audioData: musicGenResult.audioData,
                     isMock: false,
-                    message: 'Generated using free Hugging Face MusicGen!'
+                    message: `Generated using real MusicGen AI! (${musicGenResult.source})`
                 });
             }
         } catch (error) {
-            console.log('Hugging Face Spaces failed, using mock audio:', error.message);
+            console.log('Real MusicGen failed, using mock audio:', error.message);
         }
         
         // Fallback to realistic mock audio
