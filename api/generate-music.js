@@ -213,55 +213,90 @@ function generateMockAudio(instrument, duration) {
     
     const config = instrumentConfigs[instrument] || instrumentConfigs.piano;
     
-    for (let i = 0; i < numSamples; i++) {
-        const time = i / sampleRate;
-        let sample = 0;
+            for (let i = 0; i < numSamples; i++) {
+                const time = i / sampleRate;
+                let sample = 0;
+                
+                // Create musical patterns instead of constant tones
+                const beatTime = time * 2; // 2 beats per second
+                const measureTime = time * 0.5; // 4 beats per measure
+                
+                // Generate multiple frequencies with harmonics and musical patterns
+                for (let j = 0; j < config.frequencies.length; j++) {
+                    const freq = config.frequencies[j];
+                    const harmonic = config.harmonics[j];
+                    
+                    // Create rhythmic patterns
+                    let rhythmPattern = 1;
+                    if (config.envelope === 'drums') {
+                        // Drum pattern: kick on 1 and 3, snare on 2 and 4
+                        const beat = Math.floor(beatTime) % 4;
+                        if (j === 0) { // Kick drum
+                            rhythmPattern = (beat === 0 || beat === 2) ? 1 : 0;
+                        } else if (j === 1) { // Snare
+                            rhythmPattern = (beat === 1 || beat === 3) ? 1 : 0;
+                        } else { // Hi-hat
+                            rhythmPattern = 0.3 + 0.2 * Math.sin(beatTime * Math.PI * 2);
+                        }
+                    } else {
+                        // Melodic instruments: create arpeggios and melodies
+                        const noteTime = time * 0.5; // Slower note changes
+                        const noteIndex = Math.floor(noteTime * 4) % 8; // 8-note pattern
+                        const noteFreqs = [1, 1.25, 1.5, 1.25, 1, 0.75, 0.5, 0.75]; // Musical intervals
+                        rhythmPattern = noteFreqs[noteIndex] * (0.7 + 0.3 * Math.sin(noteTime * Math.PI));
+                    }
+                    
+                    // Add some vibrato for realism
+                    const vibrato = 1 + 0.02 * Math.sin(2 * Math.PI * 3 * time);
+                    const wave = Math.sin(2 * Math.PI * freq * time * vibrato) * harmonic * rhythmPattern;
+                    
+                    // Add some harmonic content
+                    if (j === 0) {
+                        sample += wave;
+                        sample += Math.sin(2 * Math.PI * freq * 2 * time * vibrato) * harmonic * 0.3 * rhythmPattern; // Octave
+                        sample += Math.sin(2 * Math.PI * freq * 3 * time * vibrato) * harmonic * 0.1 * rhythmPattern; // Fifth
+                    } else {
+                        sample += wave;
+                    }
+                }
         
-        // Generate multiple frequencies with harmonics
-        for (let j = 0; j < config.frequencies.length; j++) {
-            const freq = config.frequencies[j];
-            const harmonic = config.harmonics[j];
-            
-            // Add some vibrato for realism
-            const vibrato = 1 + 0.05 * Math.sin(2 * Math.PI * 5 * time);
-            const wave = Math.sin(2 * Math.PI * freq * time * vibrato) * harmonic;
-            
-            // Add some harmonic content
-            if (j === 0) {
-                sample += wave;
-                sample += Math.sin(2 * Math.PI * freq * 2 * time) * harmonic * 0.3; // Octave
-                sample += Math.sin(2 * Math.PI * freq * 3 * time) * harmonic * 0.1; // Fifth
-            } else {
-                sample += wave;
-            }
-        }
-        
-        // Apply ADSR envelope
-        let envelope = 1.0;
-        if (time < config.attack) {
-            envelope = time / config.attack;
-        } else if (time < config.attack + config.decay) {
-            envelope = 1 - (time - config.attack) / config.decay * (1 - config.sustain);
-        } else if (time < duration - config.release) {
-            envelope = config.sustain;
-        } else {
-            envelope = config.sustain * (duration - time) / config.release;
-        }
-        
-        // Apply instrument-specific envelope
-        if (config.envelope === 'piano') {
-            envelope *= Math.exp(-time * 2) * (1 - Math.exp(-time * 20));
-        } else if (config.envelope === 'guitar') {
-            envelope *= Math.exp(-time * 1.5) * (1 - Math.exp(-time * 15));
-        } else if (config.envelope === 'violin') {
-            envelope *= Math.exp(-time * 0.8) * (1 - Math.exp(-time * 10));
-        } else if (config.envelope === 'synth') {
-            envelope *= 0.8 + 0.2 * Math.sin(2 * Math.PI * 0.5 * time);
-        } else if (config.envelope === 'drums') {
-            envelope *= Math.exp(-time * 8) * (1 - Math.exp(-time * 50));
-        } else if (config.envelope === 'bass') {
-            envelope *= Math.exp(-time * 1.2) * (1 - Math.exp(-time * 12));
-        }
+                // Apply ADSR envelope with musical variation
+                let envelope = 1.0;
+                
+                // Create note-based envelope (each note gets its own attack/decay)
+                const noteTime = time * 0.5; // Slower note changes
+                const noteIndex = Math.floor(noteTime * 4) % 8;
+                const noteStart = noteIndex / 4; // When this note starts
+                const noteEnd = (noteIndex + 1) / 4; // When this note ends
+                const noteProgress = (time - noteStart) / (noteEnd - noteStart);
+                
+                if (noteProgress >= 0 && noteProgress <= 1) {
+                    // Individual note envelope
+                    if (noteProgress < 0.1) {
+                        envelope = noteProgress / 0.1; // Quick attack
+                    } else if (noteProgress < 0.8) {
+                        envelope = 1 - (noteProgress - 0.1) * 0.3; // Slight decay
+                    } else {
+                        envelope = 0.7 * (1 - noteProgress) / 0.2; // Quick release
+                    }
+                } else {
+                    envelope = 0; // Silence between notes
+                }
+                
+                // Apply instrument-specific envelope
+                if (config.envelope === 'piano') {
+                    envelope *= Math.exp(-time * 0.5) * (1 - Math.exp(-time * 10));
+                } else if (config.envelope === 'guitar') {
+                    envelope *= Math.exp(-time * 0.3) * (1 - Math.exp(-time * 8));
+                } else if (config.envelope === 'violin') {
+                    envelope *= Math.exp(-time * 0.2) * (1 - Math.exp(-time * 6));
+                } else if (config.envelope === 'synth') {
+                    envelope *= 0.8 + 0.2 * Math.sin(2 * Math.PI * 0.3 * time);
+                } else if (config.envelope === 'drums') {
+                    envelope *= Math.exp(-time * 4) * (1 - Math.exp(-time * 30));
+                } else if (config.envelope === 'bass') {
+                    envelope *= Math.exp(-time * 0.4) * (1 - Math.exp(-time * 8));
+                }
         
         sample *= envelope;
         
