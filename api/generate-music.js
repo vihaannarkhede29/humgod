@@ -1,3 +1,64 @@
+const fetch = require('node-fetch');
+
+// Free Hugging Face Spaces API call
+async function callHuggingFaceSpaces(audioData, instrument, duration) {
+    try {
+        const prompt = createMusicPrompt(instrument);
+        
+        // Hugging Face Spaces API endpoint
+        const response = await fetch('https://api-inference.huggingface.co/models/facebook/musicgen-stereo-melody-large', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                inputs: prompt,
+                parameters: {
+                    max_new_tokens: 256,
+                    temperature: 0.7,
+                    top_p: 0.9,
+                    do_sample: true
+                }
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HF API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        // Convert the result to base64 audio
+        if (result.audio) {
+            return {
+                success: true,
+                audioData: result.audio
+            };
+        } else {
+            throw new Error('No audio data in response');
+        }
+        
+    } catch (error) {
+        console.error('Hugging Face Spaces error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Create music prompt based on instrument
+function createMusicPrompt(instrument) {
+    const prompts = {
+        piano: 'Generate a beautiful piano melody with classical harmony and emotional depth',
+        guitar: 'Create an acoustic guitar arrangement with fingerpicking style and warm tones',
+        violin: 'Generate a violin melody with expressive vibrato and classical phrasing',
+        synth: 'Create a modern synthesizer track with electronic sounds and analog warmth',
+        drums: 'Generate a drum track with kick, snare, hi-hats, and cymbals in a rhythmic pattern',
+        bass: 'Create a bass line with deep, sustained notes and rhythmic groove'
+    };
+    
+    return prompts[instrument] || prompts.piano;
+}
+
 // Vercel serverless function for MusicGen API
 module.exports = async (req, res) => {
     // Set CORS headers
@@ -22,14 +83,29 @@ module.exports = async (req, res) => {
         
         console.log(`Generating ${instrument} music from base64 audio data`);
         
-        // Generate realistic mock audio with proper instrument sounds
+        // Try Hugging Face Spaces API first (free)
+        try {
+            const hfResult = await callHuggingFaceSpaces(audioData, instrument, duration);
+            if (hfResult.success) {
+                return res.json({
+                    success: true,
+                    audioData: hfResult.audioData,
+                    isMock: false,
+                    message: 'Generated using free Hugging Face MusicGen!'
+                });
+            }
+        } catch (error) {
+            console.log('Hugging Face Spaces failed, using mock audio:', error.message);
+        }
+        
+        // Fallback to realistic mock audio
         const mockAudio = generateMockAudio(instrument, duration);
         
         return res.json({
             success: true,
             audioData: mockAudio,
             isMock: true,
-            message: 'Using realistic mock audio (To use real MusicGen: get API key from https://replicate.com/account/api-tokens)'
+            message: 'Using realistic mock audio (Free MusicGen coming soon!)'
         });
         
     } catch (error) {
