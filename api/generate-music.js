@@ -185,8 +185,8 @@ function createMusicPrompt(instrument, audioData = null) {
     return prompt;
 }
 
-// Vercel serverless function for MusicGen API
-module.exports = async (req, res) => {
+// Main Vercel serverless function for MusicGen API
+const mainHandler = async (req, res) => {
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -290,6 +290,9 @@ module.exports = async (req, res) => {
         });
     }
 };
+
+// Export main handler as default for Vercel
+module.exports = mainHandler;
 
 // Credit management endpoints
 module.exports.getCredits = async (req, res) => {
