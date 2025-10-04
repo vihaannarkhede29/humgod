@@ -1,0 +1,49 @@
+version: '3.8'
+services:
+  musicgen:
+    image: facebookresearch/audiocraft:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ./output:/app/output
+      - ./models:/app/models
+    restart: unless-stopped
+    command: >
+      python -c "
+      from audiocraft.models import MusicGen;
+      import gradio as gr;
+      import torch;
+      
+      print('🎵 Loading MusicGen model...');
+      model = MusicGen.get_model('melody');
+      print('✅ Model loaded successfully!');
+      
+      def generate_music(prompt, duration):
+          model.set_generation_params(duration=duration);
+          audio = model.generate([prompt]);
+          return audio[0].cpu().numpy();
+      
+      interface = gr.Interface(
+          fn=generate_music,
+          inputs=[
+              gr.Textbox(label='Music Prompt', value='A beautiful piano melody'),
+              gr.Slider(5, 30, value=10, label='Duration (seconds)')
+          ],
+          outputs=gr.Audio(label='Generated Music'),
+          title='🎵 MusicGen Server',
+          description='Generate music using Meta\\'s MusicGen model'
+      );
+      
+      print('🚀 Starting MusicGen server on port 8000...');
+      interface.launch(server_name='0.0.0.0', server_port=8000, share=False);
+      "
+

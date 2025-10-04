@@ -1,0 +1,56 @@
+version: '3.8'
+services:
+  musicgen-cpu:
+    image: facebookresearch/audiocraft:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - CUDA_VISIBLE_DEVICES=""  # Disable GPU
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+    volumes:
+      - ./output:/app/output
+      - ./models:/app/models
+    restart: unless-stopped
+    command: >
+      python -c "
+      import os;
+      os.environ['CUDA_VISIBLE_DEVICES'] = '';
+      
+      from audiocraft.models import MusicGen;
+      import gradio as gr;
+      import torch;
+      
+      print('🎵 Loading MusicGen model (CPU mode)...');
+      print('⚠️  Note: CPU generation will be slower (2-5 minutes per track)');
+      
+      # Force CPU usage
+      torch.set_default_tensor_type('torch.FloatTensor');
+      
+      model = MusicGen.get_model('melody');
+      model.cpu();  # Ensure model is on CPU
+      print('✅ Model loaded successfully on CPU!');
+      
+      def generate_music(prompt, duration):
+          print(f'🎵 Generating music: {prompt} ({duration}s)');
+          model.set_generation_params(duration=duration);
+          audio = model.generate([prompt]);
+          print('✅ Generation complete!');
+          return audio[0].cpu().numpy();
+      
+      interface = gr.Interface(
+          fn=generate_music,
+          inputs=[
+              gr.Textbox(label='Music Prompt', value='A beautiful piano melody', placeholder='Describe the music you want to generate'),
+              gr.Slider(5, 15, value=8, label='Duration (seconds)', info='Shorter durations generate faster')
+          ],
+          outputs=gr.Audio(label='Generated Music'),
+          title='🎵 MusicGen Server (CPU Mode)',
+          description='Generate music using Meta\\'s MusicGen model on CPU. Generation takes 2-5 minutes per track.',
+          allow_flagging='never'
+      );
+      
+      print('🚀 Starting MusicGen server on port 8000 (CPU mode)...');
+      print('💡 Tip: Keep durations short (5-10 seconds) for faster generation');
+      interface.launch(server_name='0.0.0.0', server_port=8000, share=False);
+      "
+

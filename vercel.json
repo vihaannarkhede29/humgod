@@ -1,5 +1,10 @@
 {
   "version": 2,
+  "functions": {
+    "api/generate-music.js": {
+      "maxDuration": 10
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",
@@ -19,6 +24,18 @@
     {
       "source": "/waitlist",
       "destination": "/waitlist.html"
+    },
+    {
+      "source": "/cost-preview-demo",
+      "destination": "/cost-preview-demo.html"
+    },
+    {
+      "source": "/async-polling-demo",
+      "destination": "/async-polling-demo.html"
+    },
+    {
+      "source": "/admin-test",
+      "destination": "/admin-test.html"
     }
   ]
 }

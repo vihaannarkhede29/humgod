@@ -1,7 +1,29 @@
 const fetch = require('node-fetch');
+const Replicate = require('replicate');
+const ReplicateCreditSystem = require('./credit-system-replicate');
 
 // Simple in-memory usage tracking (in production, use a real database)
 const usageDB = new Map();
+
+// Initialize credit system
+const creditSystem = new ReplicateCreditSystem();
+
+// Store generation jobs (in production, use a database like Redis)
+const generationJobs = new Map();
+
+// Security: Password protection to prevent unauthorized usage
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'HumGod2024!Secret';
+const REQUIRED_PASSWORD = process.env.REQUIRED_PASSWORD || 'HumGod2024!Secret';
+
+// Check if user has admin access
+function checkAdminAccess(password) {
+    return password === ADMIN_PASSWORD;
+}
+
+// Check if user has required password for generation
+function checkRequiredPassword(password) {
+    return password === REQUIRED_PASSWORD;
+}
 
 // Track user usage
 function trackUsage(userId, generationLength) {
@@ -49,8 +71,8 @@ function getUserUsage(userId) {
     return usageDB.get(key) || { generations: 0, totalSeconds: 0, isPremium: false };
 }
 
-// Real MusicGen API call using Replicate (actually works!)
-async function callRealMusicGen(audioData, instrument, duration) {
+// Real MusicGen API call using Replicate (premium quality!)
+async function callRealMusicGen(audioData, instrument, duration, userId = 'anonymous') {
     try {
         console.log('🎵 Attempting real MusicGen conversion with Replicate...');
         
@@ -58,85 +80,86 @@ async function callRealMusicGen(audioData, instrument, duration) {
             console.log('❌ No Replicate API token found');
             return { success: false, error: 'Replicate API token not configured' };
         }
+
+        const modelId = "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb";
+        const generationDuration = parseInt(duration) || 10;
+        
+        // Check if user has enough credits
+        if (!creditSystem.hasEnoughCredits(userId, modelId, generationDuration)) {
+            const cost = creditSystem.calculateCost(modelId, generationDuration);
+            const userBalance = creditSystem.getUserCredits(userId);
+            return { 
+                success: false, 
+                error: `Insufficient credits. Need ${cost} credits, have ${userBalance}. Purchase more credits to continue.`,
+                creditsNeeded: cost,
+                userCredits: userBalance
+            };
+        }
+        
+        const replicate = new Replicate({
+            auth: process.env.REPLICATE_API_TOKEN,
+        });
         
         const prompt = createMusicPrompt(instrument, audioData);
         
-        // Create prediction
-        const response = await fetch('https://api.replicate.com/v1/predictions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                version: '7a76a8258b3f54f6731a567f2e2cde7e5b9e5a5f', // MusicGen model version
+        console.log('🎵 Using Replicate MusicGen model...');
+        
+        // Use Replicate's MusicGen model (melody version for audio input)
+        const output = await replicate.run(
+            "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
+            {
                 input: {
+                    model_version: "melody",
                     prompt: prompt,
-                    melody: audioData, // Base64 audio input
-                    duration: parseInt(duration) || 8,
+                    duration: Math.min(parseInt(duration) || 10, 30), // Max 30 seconds
+                    input_audio: audioData ? `data:audio/wav;base64,${audioData}` : undefined,
                     continuation: false,
-                    model_version: 'stereo-melody-large',
-                    output_format: 'wav',
                     continuation_start: 0,
+                    continuation_end: 0,
                     multi_band_diffusion: false,
-                    normalization_strategy: 'peak',
-                    classifier_free_guidance: 3
+                    normalization_strategy: "peak",
+                    top_k: 250,
+                    top_p: 0,
+                    temperature: 1,
+                    classifier_free_guidance: 3,
+                    output_format: "wav"
                 }
-            })
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.log(`❌ Replicate API failed: ${response.status} - ${errorText}`);
-            return { success: false, error: `Replicate API error: ${response.status}` };
-        }
-
-        const prediction = await response.json();
-        console.log('🎵 Replicate prediction created:', prediction.id);
-        
-        // Poll for completion
-        let result = prediction;
-        let attempts = 0;
-        const maxAttempts = 30; // 5 minutes max
-        
-        while (result.status === 'starting' || result.status === 'processing') {
-            if (attempts >= maxAttempts) {
-                return { success: false, error: 'Timeout waiting for MusicGen result' };
             }
-            
-            console.log(`🎵 Polling attempt ${attempts + 1}, status: ${result.status}`);
-            await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
-            
-            const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
-                headers: {
-                    'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`
-                }
-            });
-            
-            result = await pollResponse.json();
-            attempts++;
+        );
+
+        if (!output || !output[0]) {
+            console.log('❌ Replicate API returned no output');
+            return { success: false, error: 'No audio generated by Replicate' };
+        }
+
+        console.log('🎵 Replicate API request successful!');
+        
+        // Deduct credits after successful generation
+        const creditDeduction = creditSystem.deductCredits(userId, modelId, generationDuration);
+        console.log(`💰 Deducted ${creditDeduction.cost} credits ($${(creditDeduction.cost * 0.01).toFixed(2)}) from user ${userId}`);
+        
+        // Replicate returns a URL to the generated audio
+        const audioUrl = output[0];
+        
+        // Download the audio file
+        const audioResponse = await fetch(audioUrl);
+        if (!audioResponse.ok) {
+            throw new Error(`Failed to download audio: ${audioResponse.status}`);
         }
         
-        if (result.status === 'succeeded' && result.output) {
-            console.log('🎵 MusicGen generation succeeded!');
-            
-            // Convert the output URL to base64
-            const audioResponse = await fetch(result.output);
-            const audioBuffer = await audioResponse.arrayBuffer();
-            const audioBase64 = Buffer.from(audioBuffer).toString('base64');
-            
-            return {
-                success: true,
-                audioData: audioBase64,
-                source: 'Replicate MusicGen'
-            };
-        } else {
-            console.log('❌ MusicGen generation failed:', result);
-            return { success: false, error: result.error || 'MusicGen generation failed' };
-        }
+        const audioBuffer = await audioResponse.buffer();
+        const audioBase64 = Buffer.from(audioBuffer).toString('base64');
+        
+        return {
+            success: true,
+            audioData: audioBase64,
+            source: 'Replicate MusicGen',
+            creditsUsed: creditDeduction.cost,
+            remainingCredits: creditDeduction.newBalance
+        };
         
     } catch (error) {
-        console.error('Real MusicGen error:', error);
+        console.error('Replicate MusicGen error:', error);
         return { success: false, error: error.message };
     }
 }
@@ -178,32 +201,84 @@ module.exports = async (req, res) => {
     }
     
     try {
-        const { audioData, instrument = 'piano', duration = '10', style = 'classical', userId = 'anonymous' } = req.body;
+        const { audioData, instrument = 'piano', duration = '10', style = 'classical', userId = 'anonymous', confirmed = false, password } = req.body;
+        
+        // Security check: Require password for generation
+        if (!checkRequiredPassword(password)) {
+            return res.status(401).json({ 
+                error: 'Unauthorized access. Password required.',
+                message: 'This service is currently in private beta. Contact admin for access.',
+                requiresPassword: true
+            });
+        }
         
         if (!audioData) {
             return res.status(400).json({ error: 'No audio data provided' });
         }
         
-        // No usage limits - it's free!
+        // If not confirmed, return cost estimation instead of generating
+        if (!confirmed) {
+            const modelId = "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb";
+            const generationDuration = parseInt(duration) || 10;
+            const cost = creditSystem.calculateCost(modelId, generationDuration);
+            const userCredits = creditSystem.getUserCredits(userId);
+            const hasEnoughCredits = creditSystem.hasEnoughCredits(userId, modelId, generationDuration);
+            const userCharge = Math.max(cost + 5, Math.ceil(cost * 1.5));
+            
+            return res.json({
+                success: false,
+                requiresConfirmation: true,
+                estimation: {
+                    duration: generationDuration,
+                    instrument: instrument,
+                    costToUs: cost,
+                    costToUsDollars: (cost * 0.01).toFixed(2),
+                    chargeToUser: userCharge,
+                    chargeToUserDollars: (userCharge * 0.01).toFixed(2),
+                    profit: userCharge - cost,
+                    profitDollars: ((userCharge - cost) * 0.01).toFixed(2),
+                    profitMargin: cost > 0 ? (((userCharge - cost) / cost) * 100).toFixed(1) : 0
+                },
+                user: {
+                    credits: userCredits,
+                    hasEnoughCredits: hasEnoughCredits,
+                    canGenerate: hasEnoughCredits
+                },
+                message: hasEnoughCredits ? 
+                    `Ready to generate! Will cost ${userCharge} credits ($${(userCharge * 0.01).toFixed(2)})` :
+                    `Insufficient credits. Need ${userCharge} credits, have ${userCredits}. Purchase more credits.`
+            });
+        }
+        
         const generationLength = parseInt(duration) || 10;
         
         console.log(`Generating ${instrument} music from base64 audio data`);
         
-        // Always use mock audio - no API costs!
-        console.log('Using enhanced mock audio - no API costs!');
+        // Start async generation job (for Vercel free plan compatibility)
+        const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
-        // Fallback to realistic mock audio
-        const mockAudio = generateMockAudio(instrument, duration);
+        // Store job info
+        generationJobs.set(jobId, {
+            id: jobId,
+            status: 'starting',
+            userId: userId,
+            instrument: instrument,
+            duration: generationLength,
+            createdAt: new Date(),
+            result: null,
+            error: null
+        });
         
-        // Track usage
-        trackUsage(userId, generationLength);
+        // Start generation in background (don't await)
+        generateMusicAsync(jobId, audioData, instrument, duration, userId);
         
         return res.json({
             success: true,
-            audioData: mockAudio,
-            isMock: true,
-            message: '🎵 Generated using advanced audio synthesis! (100% Free)',
-            usage: getUserUsage(userId)
+            jobId: jobId,
+            status: 'started',
+            message: '🎵 Generation started! Check status with jobId.',
+            checkUrl: `/api/generation-status?jobId=${jobId}`,
+            estimatedTime: '30-60 seconds'
         });
         
     } catch (error) {
@@ -214,6 +289,278 @@ module.exports = async (req, res) => {
             details: error.message 
         });
     }
+};
+
+// Credit management endpoints
+module.exports.getCredits = async (req, res) => {
+    const { userId = 'anonymous' } = req.query;
+    const credits = creditSystem.getUserCredits(userId);
+    const analytics = creditSystem.getUsageAnalytics(userId);
+    
+    res.json({
+        userId: userId,
+        credits: credits,
+        analytics: analytics,
+        pricing: creditSystem.getPricingTiers()
+    });
+};
+
+module.exports.addCredits = async (req, res) => {
+    const { userId = 'anonymous', amount, source = 'purchase', password } = req.body;
+    
+    // Security check: Require admin password for adding credits
+    if (!checkAdminAccess(password)) {
+        return res.status(401).json({ 
+            error: 'Unauthorized access. Admin password required.',
+            message: 'Only admin can add credits.',
+            requiresAdminPassword: true
+        });
+    }
+    
+    if (!amount || amount <= 0) {
+        return res.status(400).json({ error: 'Invalid credit amount' });
+    }
+    
+    const result = creditSystem.addCredits(userId, amount, source);
+    
+    res.json({
+        success: true,
+        ...result,
+        message: `Added ${amount} credits to user ${userId}`
+    });
+};
+
+module.exports.getCost = async (req, res) => {
+    const { duration = 10, userId = 'anonymous' } = req.query;
+    const modelId = "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb";
+    const cost = creditSystem.calculateCost(modelId, parseInt(duration));
+    const userCredits = creditSystem.getUserCredits(userId);
+    const hasEnoughCredits = creditSystem.hasEnoughCredits(userId, modelId, parseInt(duration));
+    
+    res.json({
+        duration: parseInt(duration),
+        cost: cost,
+        costInDollars: (cost * 0.01).toFixed(2),
+        modelId: modelId,
+        userCredits: userCredits,
+        hasEnoughCredits: hasEnoughCredits,
+        canGenerate: hasEnoughCredits
+    });
+};
+
+// Background generation function (runs outside Vercel timeout)
+async function generateMusicAsync(jobId, audioData, instrument, duration, userId) {
+    try {
+        // Update job status
+        generationJobs.set(jobId, {
+            ...generationJobs.get(jobId),
+            status: 'generating'
+        });
+        
+        console.log(`🎵 Starting async generation job ${jobId} for user ${userId}`);
+        
+        if (!process.env.REPLICATE_API_TOKEN) {
+            console.log('❌ No Replicate API token found - using mock audio');
+            // Return mock audio instead of failing
+            const mockAudio = generateMockAudio(instrument, generationDuration);
+            return {
+                success: true,
+                audioData: mockAudio,
+                source: 'Mock Audio (No API token)',
+                message: 'Using mock audio - Replicate API token not configured'
+            };
+        }
+
+        const modelId = "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb";
+        const generationDuration = parseInt(duration) || 10;
+        
+        // Check credits
+        if (!creditSystem.hasEnoughCredits(userId, modelId, generationDuration)) {
+            const cost = creditSystem.calculateCost(modelId, generationDuration);
+            const userBalance = creditSystem.getUserCredits(userId);
+            console.log(`❌ Insufficient credits for user ${userId}. Need ${cost}, have ${userBalance}`);
+            
+            // Return mock audio instead of failing
+            const mockAudio = generateMockAudio(instrument, generationDuration);
+            return {
+                success: true,
+                audioData: mockAudio,
+                source: 'Mock Audio (Insufficient credits)',
+                message: `Insufficient credits. Need ${cost} credits, have ${userBalance}. Using mock audio.`,
+                creditsNeeded: cost,
+                userCredits: userBalance
+            };
+        }
+        
+        const replicate = new Replicate({
+            auth: process.env.REPLICATE_API_TOKEN,
+        });
+        
+        const prompt = createMusicPrompt(instrument, audioData);
+        
+        console.log(`🎵 Using Replicate MusicGen model for job ${jobId}...`);
+        
+        // Use Replicate's MusicGen model (following their exact API format)
+        const input = {
+            prompt: prompt,
+            model_version: "melody",
+            duration: Math.min(generationDuration, 30),
+            input_audio: audioData ? `data:audio/wav;base64,${audioData}` : undefined,
+            continuation: false,
+            continuation_start: 0,
+            continuation_end: 0,
+            multi_band_diffusion: false,
+            normalization_strategy: "peak",
+            top_k: 250,
+            top_p: 0,
+            temperature: 1,
+            classifier_free_guidance: 3,
+            output_format: "wav"
+        };
+
+        const output = await replicate.run(modelId, { input });
+
+        if (!output || !output[0]) {
+            throw new Error('No audio generated by Replicate');
+        }
+
+        console.log(`🎵 Replicate API request successful for job ${jobId}!`);
+        
+        // Deduct credits after successful generation
+        const creditDeduction = creditSystem.deductCredits(userId, modelId, generationDuration);
+        console.log(`💰 Deducted ${creditDeduction.cost} credits ($${(creditDeduction.cost * 0.01).toFixed(2)}) from user ${userId}`);
+        
+        // Download the generated audio
+        const audioUrl = output[0];
+        const audioResponse = await fetch(audioUrl);
+        if (!audioResponse.ok) {
+            throw new Error(`Failed to download audio: ${audioResponse.status}`);
+        }
+        
+        const audioBuffer = await audioResponse.buffer();
+        const audioBase64 = Buffer.from(audioBuffer).toString('base64');
+        
+        // Update job with success
+        generationJobs.set(jobId, {
+            ...generationJobs.get(jobId),
+            status: 'completed',
+            result: {
+                success: true,
+                audioData: audioBase64,
+                source: 'Replicate MusicGen',
+                creditsUsed: creditDeduction.cost,
+                remainingCredits: creditDeduction.newBalance
+            },
+            completedAt: new Date()
+        });
+        
+        console.log(`✅ Generation job ${jobId} completed successfully!`);
+        
+    } catch (error) {
+        console.error(`❌ Generation job ${jobId} failed:`, error.message);
+        
+        // Update job with error
+        generationJobs.set(jobId, {
+            ...generationJobs.get(jobId),
+            status: 'failed',
+            error: error.message,
+            completedAt: new Date()
+        });
+    }
+}
+
+// Get generation status
+module.exports.getGenerationStatus = async (req, res) => {
+    const { jobId } = req.query;
+    
+    if (!jobId) {
+        return res.status(400).json({ error: 'Job ID required' });
+    }
+    
+    const job = generationJobs.get(jobId);
+    
+    if (!job) {
+        return res.status(404).json({ error: 'Job not found' });
+    }
+    
+    const elapsed = job.completedAt ? 
+        Math.floor((job.completedAt - job.createdAt) / 1000) :
+        Math.floor((new Date() - job.createdAt) / 1000);
+    
+    res.json({
+        jobId: jobId,
+        status: job.status,
+        userId: job.userId,
+        instrument: job.instrument,
+        duration: job.duration,
+        createdAt: job.createdAt,
+        completedAt: job.completedAt,
+        elapsedSeconds: elapsed,
+        result: job.result,
+        error: job.error,
+        message: getStatusMessage(job.status, elapsed)
+    });
+};
+
+function getStatusMessage(status, elapsed) {
+    switch (status) {
+        case 'starting':
+            return 'Starting generation...';
+        case 'generating':
+            return `Generating music... (${elapsed}s elapsed)`;
+        case 'completed':
+            return `Generation complete! (took ${elapsed}s)`;
+        case 'failed':
+            return 'Generation failed';
+        default:
+            return 'Unknown status';
+    }
+}
+
+// New endpoint: Estimate cost for generation (before actually generating)
+module.exports.estimateCost = async (req, res) => {
+    const { duration = 10, instrument = 'piano', userId = 'anonymous', password } = req.body;
+    
+    // Security check: Require password for cost estimation
+    if (!checkRequiredPassword(password)) {
+        return res.status(401).json({ 
+            error: 'Unauthorized access. Password required.',
+            message: 'This service is currently in private beta. Contact admin for access.',
+            requiresPassword: true
+        });
+    }
+    const modelId = "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb";
+    const generationDuration = parseInt(duration) || 10;
+    
+    const cost = creditSystem.calculateCost(modelId, generationDuration);
+    const userCredits = creditSystem.getUserCredits(userId);
+    const hasEnoughCredits = creditSystem.hasEnoughCredits(userId, modelId, generationDuration);
+    
+    // Calculate what we'll charge user (with profit margin)
+    const userCharge = Math.max(cost + 5, Math.ceil(cost * 1.5)); // At least 5 credits more, or 50% markup
+    
+    res.json({
+        success: true,
+        estimation: {
+            duration: generationDuration,
+            instrument: instrument,
+            costToUs: cost,
+            costToUsDollars: (cost * 0.01).toFixed(2),
+            chargeToUser: userCharge,
+            chargeToUserDollars: (userCharge * 0.01).toFixed(2),
+            profit: userCharge - cost,
+            profitDollars: ((userCharge - cost) * 0.01).toFixed(2),
+            profitMargin: cost > 0 ? (((userCharge - cost) / cost) * 100).toFixed(1) : 0
+        },
+        user: {
+            credits: userCredits,
+            hasEnoughCredits: hasEnoughCredits,
+            canGenerate: hasEnoughCredits
+        },
+        message: hasEnoughCredits ? 
+            `Ready to generate! Will cost ${userCharge} credits ($${(userCharge * 0.01).toFixed(2)})` :
+            `Insufficient credits. Need ${userCharge} credits, have ${userCredits}. Purchase more credits.`
+    });
 };
 
 // Mock audio generation function
